@@ -1,0 +1,44 @@
+################ Build options #######################################
+
+NAME		:= @PKG_NAME@
+MAJOR		:= @PKG_MAJOR@
+MINOR		:= @PKG_MINOR@
+
+#DEBUG		:= 1
+
+################ Programs ############################################
+
+CXX		:= @CXX@
+CC		:= @CC@
+AR		:= @AR@
+RANLIB		:= @RANLIB@
+INSTALL		:= @INSTALL@
+
+INSTALLEXE	:= ${INSTALL} -D -p -m 700 -s
+INSTALLDATA	:= ${INSTALL} -D -p -m 644
+INSTALLLIB	:= ${INSTALLDATA}
+RMPATH		:= rmdir -p --ignore-fail-on-non-empty
+
+################ Destination #########################################
+
+BINDIR		:= @bindir@
+INCDIR		:= @includedir@
+LIBDIR		:= @libdir@
+DOCDIR		:= @docdir@
+#PKGCONFIGDIR	:= @pkgconfigdir@
+
+################ Compiler options ####################################
+
+CXXFLAGS	:= -Wall -Wextra -Wredundant-decls -Wshadow \
+		-std=c++17 \
+		-ffunction-sections -fdata-sections \
+		-fno-pie -fno-stack-protector
+ifdef DEBUG
+    CXXFLAGS	+= -O0 -ggdb3
+    LDFLAGS	+= -g -rdynamic
+else
+    CXXFLAGS	+= -Os -g0 -DNDEBUG=1
+    LDFLAGS	+= -s -Wl,-O1,-gc-sections
+endif
+BUILDDIR	:= @builddir@/${NAME}
+O		:= .o/
