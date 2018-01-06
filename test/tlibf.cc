@@ -3,7 +3,7 @@
 // Copyright (c) 2018 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the MIT License.
 
-#include "../memblock.h"
+#include "../vector.h"
 #include <ctype.h>
 using namespace cwiclo;
 

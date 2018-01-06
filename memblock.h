@@ -89,6 +89,7 @@ public:
     inline void			assign (memblock&& v) noexcept		{ swap (move(v)); }
     inline memblock&		operator= (const memblock& v) noexcept	{ assign (v); return *this; }
     inline memblock&		operator= (memblock&& v) noexcept	{ assign (move(v)); return *this; }
+    void			swap (memblock&& v) noexcept		{ memlink::swap (move(v)); }
     void			resize (size_type sz) noexcept;
     void			reserve (size_type sz) noexcept;
     iterator			insert (const_iterator start, size_type n) noexcept;
