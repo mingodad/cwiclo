@@ -5,5 +5,6 @@
 
 #include "memblock.h"
 
-memblock::memblock (void)
-    :_p(nullptr) {}
+namespace cwiclo {
+
+} // namespace cwiclo

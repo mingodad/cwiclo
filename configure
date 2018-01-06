@@ -25,7 +25,7 @@ seds=[s/ -std=c/ -march=native -std=c/]
 }';
 
 # Header files
-HEADERS=""
+HEADERS="alloca.h execinfo.h inttypes.h stdint.h sys/mman.h sys/types.h"
 
 # Libraries
 LIBS=""

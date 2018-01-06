@@ -30,15 +30,15 @@ DOCDIR		:= @docdir@
 ################ Compiler options ####################################
 
 CXXFLAGS	:= -Wall -Wextra -Wredundant-decls -Wshadow \
-		-std=c++17 \
+		-std=c++17 -fno-exceptions -fno-rtti \
 		-ffunction-sections -fdata-sections \
-		-fno-pie -fno-stack-protector
+		-no-pie -fno-stack-protector
 ifdef DEBUG
     CXXFLAGS	+= -O0 -ggdb3
-    LDFLAGS	+= -g -rdynamic
+    LDFLAGS	+= -g -rdynamic -no-pie
 else
     CXXFLAGS	+= -Os -g0 -DNDEBUG=1
-    LDFLAGS	+= -s -Wl,-O1,-gc-sections
+    LDFLAGS	+= -s -no-pie -Wl,-O1,-gc-sections
 endif
 BUILDDIR	:= @builddir@/${NAME}
 O		:= .o/
