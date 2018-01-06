@@ -6,6 +6,34 @@
 #include "memory.h"
 #include <alloca.h>
 
+extern "C" void* _realloc (void* p, size_t n)
+{
+    p = realloc (p, n);
+    if (!p)
+	abort();
+    return p;
+}
+
+extern "C" void* _alloc (size_t n)
+{
+    return _realloc (nullptr, n);
+}
+
+extern "C" void _free (void* p)
+    { free(p); }
+
+//----------------------------------------------------------------------
+
+void* operator new (size_t n)	WEAKALIAS("_alloc");
+void* operator new[] (size_t n)	WEAKALIAS("_alloc");
+
+void  operator delete (void* p) noexcept	WEAKALIAS("_free");
+void  operator delete[] (void* p) noexcept	WEAKALIAS("_free");
+void  operator delete (void* p, size_t n) noexcept	WEAKALIAS("_free");
+void  operator delete[] (void* p, size_t n) noexcept	WEAKALIAS("_free");
+
+//----------------------------------------------------------------------
+
 namespace cwiclo {
 
 extern "C" void brotate (void* vf, void* vm, void* vl) noexcept

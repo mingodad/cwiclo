@@ -54,8 +54,8 @@ static void TestML (void)
     fill_n (a.end() - 7, 7, '=');
     WriteML (a);
 }
-//}}}
-//{{{ TestMB -----------------------------------------------------------
+//}}}-------------------------------------------------------------------
+//{{{ TestMB
 
 static void WriteMB (const memblock& l)
 {
@@ -112,14 +112,82 @@ static void TestMB (void)
     fill_n (a.iat(strTestLen), strTestLen/2, '+');
     WriteMB (a);
 }
-//}}}
+
+//}}}-------------------------------------------------------------------
+//{{{ TestVector
+
+static void PrintVector (const vector<int>& v)
+{
+    putchar ('{');
+    for (auto i = 0u; i < v.size(); ++i) {
+	if (i)
+	    putchar (',');
+	printf ("%d", v[i]);
+    }
+    puts ("}");
+}
+
+static vector<int> MakeIotaVector (unsigned n)
+{
+    vector<int> r (n);
+    for (auto i = 0u; i < r.size(); ++i)
+	r[i] = i;
+    return r;
+}
+
+static vector<int> SubtractVector (const vector<int>& v1, const vector<int>& v2)
+{
+    vector<int> r (v1.begin(), v1.iat(min(v1.size(),v2.size())));
+    for (auto i = 0u; i < r.size(); ++i)
+	r[i] = v1[i] - v2[i];
+    return r;
+}
+
+struct A {
+    A (void) { puts ("A::A"); }
+    ~A (void) { puts ("A::~A"); }
+};
+
+static void TestVector (void)
+{
+    const vector<int> vstd { 8,3,1,2,5,6,1,3,4,9 };
+    PrintVector (vstd);
+    auto v = vstd;
+    v.resize (17);
+    fill_n (v.iat(vstd.size()), v.size()-vstd.size(), 7);
+    v.resize (14);
+    PrintVector (v);
+    auto dv = SubtractVector (v, MakeIotaVector (v.size()));
+    PrintVector (dv);
+    v.shrink_to_fit();
+    printf ("v: front %d, back %d, [4] %d, capacity %u\n", v.front(), v.back(), v[4], v.capacity());
+    v.insert (v.iat(4), {23,24,25});
+    v.emplace (v.iat(2), 77);
+    v.emplace_back (62);
+    v.emplace_back (62);
+    v.push_back (62);
+    v.erase (v.end()-2);
+    v.pop_back();
+    PrintVector (v);
+
+    puts ("Constructing vector<A>(3)");
+    vector<A> av (3);
+    puts ("resize vector<A> to 4");
+    av.resize (4);
+    puts ("erase 2");
+    av.erase (av.iat(2), 2);
+    puts ("deallocating");
+}
+
+//}}}-------------------------------------------------------------------
 
 int main (void)
 {
     using stdtestfunc_t	= void (*)(void);
     static const stdtestfunc_t c_Tests[] = {
 	TestML,
-	TestMB
+	TestMB,
+	TestVector
     };
     for (auto i = 0u; i < ArraySize(c_Tests); ++i) {
 	printf ("######################################################################\n");

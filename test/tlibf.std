@@ -12,3 +12,21 @@ memblock{35}: abcde---------fghijklmnopqrstuvwxyz
 memblock{28}: ab-----fghijklmnopqrs=======
 memblock{0}: 
 memblock{39}: ab-----fghijklmnopqrs=====+++++++++++++
+######################################################################
+{8,3,1,2,5,6,1,3,4,9}
+{8,3,1,2,5,6,1,3,4,9,7,7,7,7}
+{8,2,-1,-1,1,1,-5,-4,-4,0,-3,-4,-5,-6}
+v: front 8, back 7, [4] 5, capacity 14
+{8,3,77,1,2,23,24,25,5,6,1,3,4,9,7,7,7,7,62}
+Constructing vector<A>(3)
+A::A
+A::A
+A::A
+resize vector<A> to 4
+A::A
+erase 2
+A::~A
+A::~A
+deallocating
+A::~A
+A::~A

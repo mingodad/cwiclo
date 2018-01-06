@@ -6,9 +6,8 @@
 #pragma once
 #include "utility.h"
 
-namespace std {	// replaced gcc internal stuff must be in std::
-
 //{{{ initializer_list -------------------------------------------------
+namespace std {	// replaced gcc internal stuff must be in std::
 
 /// Internal class for compiler support of C++11 initializer lists
 template <typename T>
@@ -35,12 +34,33 @@ private:
     size_type			_size;
 };
 
-//}}}-------------------------------------------------------------------
-
 } // namespace std
-namespace cwiclo {
+//}}}-------------------------------------------------------------------
+//{{{ new and delete
 
+extern "C" void* _realloc (void* p, size_t n) MALLOCLIKE MALLOCLIKE_ARG(1);
+extern "C" void* _alloc (size_t n) MALLOCLIKE MALLOCLIKE_ARG(1);
+extern "C" void _free (void* p);
+
+void* operator new (size_t n);
+void* operator new[] (size_t n);
+void  operator delete (void* p) noexcept;
+void  operator delete[] (void* p) noexcept;
+void  operator delete (void* p, size_t) noexcept;
+void  operator delete[] (void* p, size_t) noexcept;
+
+// Default placement versions of operator new.
+inline void* operator new (size_t, void* p)	{ return p; }
+inline void* operator new[] (size_t, void* p)	{ return p; }
+
+// Default placement versions of operator delete.
+inline void  operator delete  (void*, void*)	{ }
+inline void  operator delete[](void*, void*)	{ }
+
+//}}}-------------------------------------------------------------------
 //{{{ Rvalue forwarding
+
+namespace cwiclo {
 
 template <typename T> constexpr decltype(auto)
 forward (remove_reference_t<T>& v) noexcept { return static_cast<T&&>(v); }
@@ -206,69 +226,69 @@ inline void destroy_at (T* p) noexcept
 // Helper templates to bulk construct trivial types
 namespace {
 
-template <typename T, bool Trivial>
+template <typename P, bool Trivial>
 struct type_ctors {
-    inline void call (T first, T last) { for (; first < last; ++first) construct_at (first); }
-    inline void call (T first, ssize_t n) { for (;--n >= 0; ++first) construct_at (first); }
+    inline void call (P f, P l) { for (; f < l; ++f) construct_at (f); }
+    inline void call (P f, ssize_t n) { for (;--n >= 0; ++f) construct_at (f); }
 };
-template <typename T>
-struct type_ctors<T,true> {
-    inline void call (T first, T last) { memset (first, 0, (last-first)*sizeof(T)); }
-    inline void call (T first, size_t n) { memset (first, 0, n*sizeof(T)); }
+template <typename P>
+struct type_ctors<P,true> {
+    inline void call (P f, size_t n) { memset (f, 0, n*sizeof(*f)); }
+    inline void call (P f, P l) { if (f < l) call (f, l-f); }
 };
-template <typename T, bool Trivial>
+template <typename P, bool Trivial>
 struct type_dtors {
-    inline void call (T first, T last) { for (; first < last; ++first) destroy_at (first); }
-    inline void call (T first, ssize_t n) { for (;--n >= 0; ++first) destroy_at (first); }
+    inline void call (P f, P l) { for (; f < l; ++f) destroy_at (f); }
+    inline void call (P f, ssize_t n) { for (;--n >= 0; ++f) destroy_at (f); }
 };
-template <typename T>
-struct type_dtors<T,true> {
+template <typename P>
+struct type_dtors<P,true> {
 #ifndef NDEBUG
-    inline void call (T first, T last) { memset (first, 0xcd, (last-first)*sizeof(T)); }
-    inline void call (T first, size_t n) { memset (first, 0xcd, n*sizeof(T)); }
+    inline void call (P f, size_t n) { memset (f, 0xcd, n*sizeof(*f)); }
+    inline void call (P f, P l) { if (f < l) call (f, l-f); }
 #else
-    inline void call (T, T) {}
-    inline void call (T, size_t) {}
+    inline void call (P, P) {}
+    inline void call (P, size_t) {}
 #endif
 };
 } // namespace
 
 /// Calls the placement new on \p p.
 template <typename I>
-inline auto uninitialized_default_construct (I first, I last)
+inline auto uninitialized_default_construct (I f, I l)
 {
     using value_type = typename iterator_traits<I>::value_type;
     using type_ctors_t = type_ctors<I,is_trivially_constructible<value_type>::value>;
-    type_ctors_t().call (first, last);
-    return first;
+    type_ctors_t().call (f, l);
+    return f;
 }
 
 /// Calls the placement new on \p p.
 template <typename I>
-inline auto uninitialized_default_construct_n (I first, size_t n)
+inline auto uninitialized_default_construct_n (I f, size_t n)
 {
     using value_type = typename iterator_traits<I>::value_type;
     using type_ctors_t = type_ctors<I,is_trivially_constructible<value_type>::value>;
-    type_ctors_t().call (first, n);
-    return first;
+    type_ctors_t().call (f, n);
+    return f;
 }
 
-/// Calls the destructor on elements in range [first, last) without calling delete.
+/// Calls the destructor on elements in range [f, l) without calling delete.
 template <typename I>
-inline void destroy (I first, I last) noexcept
+inline void destroy (I f, I l) noexcept
 {
     using value_type = typename iterator_traits<I>::value_type;
     using type_dtors_t = type_dtors<I,is_trivially_destructible<value_type>::value>;
-    type_dtors_t().call (first, last);
+    type_dtors_t().call (f, l);
 }
 
-/// Calls the destructor on elements in range [first, first+n) without calling delete.
+/// Calls the destructor on elements in range [f, f+n) without calling delete.
 template <typename I>
-inline void destroy_n (I first, size_t n) noexcept
+inline void destroy_n (I f, size_t n) noexcept
 {
     using value_type = typename iterator_traits<I>::value_type;
     using type_dtors_t = type_dtors<I,is_trivially_destructible<value_type>::value>;
-    type_dtors_t().call (first, n);
+    type_dtors_t().call (f, n);
 }
 
 //}}}-------------------------------------------------------------------
@@ -284,11 +304,10 @@ struct type_copy {
 };
 template <typename I>
 struct type_copy<I,I,true> {
-    using value_type = typename iterator_traits<I>::value_type;
     inline void call (I first, I last, I result)
-	{ memcpy (result, first, (last-first)*sizeof(value_type)); }
+	{ memcpy (result, first, (last-first)*sizeof(*first)); }
     inline void call_n (I first, size_t n, I result)
-	{ memcpy (result, first, n*sizeof(value_type)); }
+	{ memcpy (result, first, n*sizeof(*first)); }
 };
 }
 
@@ -455,6 +474,5 @@ void sort (I f, I l)
     qsort (f, l-f, sizeof(value_type), c_compare<value_type>);
 }
 
-//}}}-------------------------------------------------------------------
-
 } // namespace cwiclo
+//}}}-------------------------------------------------------------------
