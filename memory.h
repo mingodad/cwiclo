@@ -326,6 +326,12 @@ auto fill_n (I first, ssize_t n, const T& v)
     return first;
 }
 
+extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
+
+template <typename T>
+void rotate (T* f, T* m, T* l)
+    { brotate (f, m, l); }
+
 //}}}-------------------------------------------------------------------
 //{{{ uninitialized fill and copy
 
@@ -388,6 +394,65 @@ inline auto uninitialized_fill_n (I first, ssize_t n, const T& v)
     for (; --n >= 0; ++first)
 	construct_at (&*first, v);
     return first;
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Searching algorithms
+
+template <typename I, typename T>
+auto lower_bound (I f, I l, const T& v)
+{
+    while (f < l) {
+	auto m = f + (l - f)/2;
+	if (*m < v)
+	    f = m + 1;
+	else
+	    l = m;
+    }
+    return f;
+}
+
+template <typename I, typename T>
+inline auto binary_search (I f, I l, const T& v)
+{
+    auto b = lower_bound (f, l, v);
+    return (b == l || v < *b) ? nullptr : b;
+}
+
+template <typename I, typename T>
+I linear_search (I f, I l, const T& v)
+{
+    for (; f < l; ++f)
+	if (*f == v)
+	    return f;
+    return nullptr;
+}
+
+template <typename I, typename T>
+auto upper_bound (I f, I l, const T& v)
+{
+    while (f < l) {
+	auto m = f + (l - f)/2;
+	if (v < *m)
+	    l = m;
+	else
+	    f = m + 1;
+    }
+    return l;
+}
+
+template <typename T>
+int c_compare (const void* v1, const void* v2)
+{
+    auto t1 = (const T*) v1, t2 = (const T*) v2;
+    return t1 < t2 ? -1 : (t2 < t1 ? 1 : 0);
+}
+
+template <typename I>
+void sort (I f, I l)
+{
+    using value_type = typename iterator_traits<I>::value_type;
+    qsort (f, l-f, sizeof(value_type), c_compare<value_type>);
 }
 
 //}}}-------------------------------------------------------------------

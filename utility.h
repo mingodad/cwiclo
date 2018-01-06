@@ -5,6 +5,7 @@
 
 #pragma once
 #include "config.h"
+namespace cwiclo {
 
 //{{{ Type modifications -----------------------------------------------
 
@@ -182,3 +183,5 @@ inline constexpr bool IsPow2 (T v)
     { return !(v&(v-1)); }
 
 //}}}----------------------------------------------------------------------
+
+} // namespace cwiclo

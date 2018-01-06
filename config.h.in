@@ -15,7 +15,6 @@
 // Define to the address where bug reports for this package should be sent.
 #define @PKG_UNAME@_BUGREPORT	"@PKG_BUGREPORT@"
 
-#undef HAVE_ALLOCA_H		// Define to 1 if you have the <alloca.h> header file.
 #undef HAVE_EXECINFO_H	// Define to 1 if you have the <execinfo.h> header file.
 #undef HAVE_INTTYPES_H	// Define to 1 if you have the <inttypes.h> header file.
 #undef HAVE_STDINT_H		// Define to 1 if you have the <stdint.h> header file.
