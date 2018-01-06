@@ -22,7 +22,9 @@ public:
 public:
     inline constexpr		memlink (void)				: _data(nullptr), _size(), _capz() {}
     inline constexpr		memlink (pointer p, size_type n)	: _data(p), _size(n), _capz() {}
-    inline constexpr		memlink (const_pointer p, size_type n)	: _data(const_cast<pointer>(p)), _size(n), _capz() {}
+    inline constexpr		memlink (const_pointer p, size_type n)	: memlink (const_cast<pointer>(p), n) {}
+    inline constexpr		memlink (pointer p, size_type n, bool z)	: _data(p), _size(n), _zerot(z), _capacity(0) {}
+    inline constexpr		memlink (const_pointer p, size_type n, bool z)	: memlink (const_cast<pointer>(p),n,z) {}
     inline			memlink (void* p, size_type n)		: memlink (reinterpret_cast<pointer>(p), n) {}
     inline			memlink (const void* p, size_type n)	: memlink (reinterpret_cast<const_pointer>(p), n) {}
     inline constexpr		memlink (const memlink& v)		: _data(v._data), _size(v._size), _zerot(v._zerot), _capacity() {}
@@ -42,6 +44,7 @@ public:
     inline auto			end (void)				{ return begin()+size(); }
     inline constexpr auto	end (void) const			{ return begin()+size(); }
     inline constexpr auto	cend (void) const			{ return end(); }
+    inline auto			iat (size_type i)			{ assert (i <= size()); return begin() + i; }
     inline auto			iat (size_type i) const			{ assert (i <= size()); return begin() + i; }
     inline auto			ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
     inline auto&		at (size_type i)			{ assert (i < size()); return begin()[i]; }
@@ -51,7 +54,9 @@ public:
     inline bool			operator== (const memlink& v) const	{ return size() == v.size() && 0 == memcmp (data(), v.data(), size()); }
     inline void			link (pointer p, size_type n)		{ _data = p; _size = n; }
     inline void			link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
-    inline void			link (const memlink& v)			{ link (v.begin(), v.size()); }
+    inline void			link (pointer p, size_type n, bool z)		{ link(p,n); _zerot = z; }
+    inline void			link (const_pointer p, size_type n, bool z)	{ link (const_cast<pointer>(p), n, z); }
+    inline void			link (const memlink& v)			{ link (v.begin(), v.size(), v.zero_terminated()); }
     inline void			unlink (void)				{ _data = nullptr; _size = 0; _capacity = 0; }
     void			swap (memlink&& v)			{ ::cwiclo::swap(_data, v._data); ::cwiclo::swap(_size, v._size); ::cwiclo::swap(_capz,v._capz); }
     inline void			resize (size_type sz)			{ _size = sz; }
@@ -81,7 +86,9 @@ private:
 class memblock : public memlink {
 public:
 				using memlink::memlink;
-				memblock (size_type sz) noexcept;
+				memblock (size_type sz) noexcept	: memlink() { resize (sz); }
+				memblock (const memblock& v)		: memlink(v) {}
+				memblock (memblock&& v)			: memlink(move(v)) {}
 				~memblock (void) noexcept		{ deallocate(); }
     inline void			manage (pointer p, size_type n)		{ assert(!capacity() && "unlink or deallocate first"); link (p, n); set_capacity(n); }
     void			assign (const_pointer p, size_type n) noexcept;
@@ -91,6 +98,7 @@ public:
     inline memblock&		operator= (memblock&& v) noexcept	{ assign (move(v)); return *this; }
     void			swap (memblock&& v) noexcept		{ memlink::swap (move(v)); }
     void			resize (size_type sz) noexcept;
+    inline void			clear (void)				{ resize(0); }
     void			reserve (size_type sz) noexcept;
     iterator			insert (const_iterator start, size_type n) noexcept;
     iterator			erase (const_iterator start, size_type n) noexcept;
