@@ -8,7 +8,7 @@
 
 namespace cwiclo {
 
-class alignas(16) memblock {
+class alignas(16) memlink {
 public:
     using value_type		= char;
     using pointer		= value_type*;
@@ -20,15 +20,15 @@ public:
     using const_iterator	= const_pointer;
     using iterator		= pointer;
 public:
-    inline constexpr		memblock (void)				: _data(nullptr), _size(), _capz() {}
-    inline constexpr		memblock (pointer p, size_type n)	: _data(p), _size(n), _capz() {}
-    inline constexpr		memblock (const_pointer p, size_type n)	: _data(const_cast<pointer>(p)), _size(n), _capz() {}
-    inline			memblock (void* p, size_type n)		: memblock (reinterpret_cast<pointer>(p), n) {}
-    inline			memblock (const void* p, size_type n)	: memblock (reinterpret_cast<const_pointer>(p), n) {}
-    inline constexpr		memblock (const memblock& v)		: _data(v._data), _size(v._size), _capacity(), _zerot(v._zerot) {}
-    inline			memblock (memblock&& v)			: _data(v._data), _size(v._size), _capz(v._capz) { v._capacity = 0; }
-    inline auto&		operator= (const memblock& v)		{ link (v); return *this; }
-    inline auto&		operator= (memblock&& v)		{ link (v); v.unlink(); return *this; }
+    inline constexpr		memlink (void)				: _data(nullptr), _size(), _capz() {}
+    inline constexpr		memlink (pointer p, size_type n)	: _data(p), _size(n), _capz() {}
+    inline constexpr		memlink (const_pointer p, size_type n)	: _data(const_cast<pointer>(p)), _size(n), _capz() {}
+    inline			memlink (void* p, size_type n)		: memlink (reinterpret_cast<pointer>(p), n) {}
+    inline			memlink (const void* p, size_type n)	: memlink (reinterpret_cast<const_pointer>(p), n) {}
+    inline constexpr		memlink (const memlink& v)		: _data(v._data), _size(v._size), _zerot(v._zerot), _capacity() {}
+    inline			memlink (memlink&& v)			: _data(v._data), _size(v._size), _capz(v._capz) { v._capacity = 0; }
+    inline auto&		operator= (const memlink& v)		{ link (v); return *this; }
+    inline auto&		operator= (memlink&& v)			{ link (v); v.unlink(); return *this; }
     inline constexpr auto	max_size (void) const			{ return UINT32_MAX/2; }
     inline constexpr auto	size (void) const			{ return _size; }
     inline constexpr auto	empty (void) const			{ return !size(); }
@@ -44,26 +44,65 @@ public:
     inline constexpr auto	cend (void) const			{ return end(); }
     inline auto			iat (size_type i) const			{ assert (i <= size()); return begin() + i; }
     inline auto			ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
+    inline auto&		at (size_type i)			{ assert (i < size()); return begin()[i]; }
     inline auto&		at (size_type i) const			{ assert (i < size()); return begin()[i]; }
+    inline auto&		operator[] (size_type i)		{ return at (i); }
     inline auto&		operator[] (size_type i) const		{ return at (i); }
+    inline bool			operator== (const memlink& v) const	{ return size() == v.size() && 0 == memcmp (data(), v.data(), size()); }
     inline void			link (pointer p, size_type n)		{ _data = p; _size = n; }
     inline void			link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
-    inline void			link (const memblock& v)		{ link (v.begin(), v.size()); }
+    inline void			link (const memlink& v)			{ link (v.begin(), v.size()); }
     inline void			unlink (void)				{ _data = nullptr; _size = 0; _capacity = 0; }
+    void			swap (memlink&& v)			{ ::cwiclo::swap(_data, v._data); ::cwiclo::swap(_size, v._size); ::cwiclo::swap(_capz,v._capz); }
+    inline void			resize (size_type sz)			{ _size = sz; }
+    inline void			clear (void)				{ resize(0); }
+    iterator			insert (const_iterator start, size_type n) noexcept;
+    iterator			erase (const_iterator start, size_type n) noexcept;
 protected:
     inline bool			zero_terminated (void) const		{ return _zerot; }
     inline void			set_zero_terminated (void)		{ _zerot = 1; }
     inline void			set_capacity (size_type c)		{ _capacity = c; }
+    inline auto			capz (void) const			{ return _capz; }
+    inline void			set_capz (size_type cz)			{ _capz = cz; }
 private:
     pointer			_data;			///< Pointer to the data block
     size_type			_size alignas(8);	///< Size of the data block. Aligning _size makes cmemlink 16 bytes on 32 and 64 bit platforms.
     union {
 	size_type		_capz;
 	struct {
-	    size_type		_capacity:31;
 	    size_type		_zerot:1;
+	    size_type		_capacity:31;
 	};
     };
 };
+
+//----------------------------------------------------------------------
+
+class memblock : public memlink {
+public:
+				using memlink::memlink;
+				memblock (size_type sz) noexcept;
+				~memblock (void) noexcept		{ deallocate(); }
+    inline void			manage (pointer p, size_type n)		{ assert(!capacity() && "unlink or deallocate first"); link (p, n); set_capacity(n); }
+    void			assign (const_pointer p, size_type n) noexcept;
+    inline void			assign (const memblock& v) noexcept	{ assign (v.data(), v.size()); }
+    inline void			assign (memblock&& v) noexcept		{ swap (move(v)); }
+    inline memblock&		operator= (const memblock& v) noexcept	{ assign (v); return *this; }
+    inline memblock&		operator= (memblock&& v) noexcept	{ assign (move(v)); return *this; }
+    void			resize (size_type sz) noexcept;
+    void			reserve (size_type sz) noexcept;
+    iterator			insert (const_iterator start, size_type n) noexcept;
+    iterator			erase (const_iterator start, size_type n) noexcept;
+    void			deallocate (void) noexcept;
+    inline void			copy_link (void) noexcept		{ resize (size()); }
+    void			shrink_to_fit (void) noexcept;
+};
+
+//----------------------------------------------------------------------
+
+/// Use with memlink-derived classes to link to a static array
+#define static_link(v)	link (ArrayBlock(v))
+/// Use with memlink-derived classes to allocate and link to stack space.
+#define alloca_link(n)	link (alloca(n), (n))
 
 } // namespace cwiclo
