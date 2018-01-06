@@ -4,7 +4,7 @@
 // This file is free software, distributed under the MIT License.
 
 #pragma once
-#include "config.h"
+#include "utility.h"
 
 namespace std {	// replaced gcc internal stuff must be in std::
 
@@ -40,37 +40,6 @@ private:
 } // namespace std
 namespace cwiclo {
 
-//{{{ Type modifications -----------------------------------------------
-
-/// true or false templatized constant for metaprogramming
-template <typename T, T v>
-struct integral_constant {
-    using value_type = T;
-    using type = integral_constant<value_type,v>;
-    static constexpr const value_type value = v;
-    constexpr operator value_type() const { return value; }
-    constexpr auto operator()() const { return value; }
-};
-
-using true_type = integral_constant<bool, true>;
-using false_type = integral_constant<bool, false>;
-
-template <typename T, typename U> struct is_same : public false_type {};
-template <typename T> struct is_same<T,T> : public true_type {};
-
-template <typename T> struct remove_reference		{ using type = T; };
-template <typename T> struct remove_reference<T&>	{ using type = T; };
-template <typename T> struct remove_reference<T&&>	{ using type = T; };
-template <typename T> using remove_reference_t = typename remove_reference<T>::type;
-
-template <typename T> T&& declval (void) noexcept;
-
-template <typename T> struct is_trivial : public integral_constant<bool, __is_trivial(T)> {};
-template <typename T> struct is_trivially_constructible : public integral_constant<bool, __has_trivial_constructor(T)> {};
-template <typename T> struct is_trivially_destructible : public integral_constant<bool, __has_trivial_destructor(T)> {};
-template <typename T> struct is_trivially_copyable : public integral_constant<bool, __has_trivial_copy(T)> {};
-
-//}}}-------------------------------------------------------------------
 //{{{ Rvalue forwarding
 
 template <typename T> constexpr decltype(auto)

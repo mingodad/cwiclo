@@ -13,7 +13,8 @@ void PrintMemblock (const memblock& b)
 
 int main (void)
 {
-    memblock b = {'a','b','c','d','e','f','g','h','i','h','\0'};
+    static const char c_TestString[] = "abcdefghijklmnopqrstuvwxyz";
+    memblock b (ArrayBlock (c_TestString));
     PrintMemblock (b);
     return EXIT_SUCCESS;
 }
