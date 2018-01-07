@@ -183,5 +183,42 @@ inline constexpr bool IsPow2 (T v)
     { return !(v&(v-1)); }
 
 //}}}----------------------------------------------------------------------
+//{{{ atomic_flag
+
+enum memory_order {
+    memory_order_relaxed = __ATOMIC_RELAXED,
+    memory_order_consume = __ATOMIC_CONSUME,
+    memory_order_acquire = __ATOMIC_ACQUIRE,
+    memory_order_release = __ATOMIC_RELEASE,
+    memory_order_acq_rel = __ATOMIC_ACQ_REL,
+    memory_order_seq_cst = __ATOMIC_SEQ_CST
+};
+
+class atomic_flag {
+    bool		_v;
+public:
+			atomic_flag (void) = default;
+    inline constexpr	atomic_flag (bool v)	: _v(v) {}
+			atomic_flag (const atomic_flag&) = delete;
+    atomic_flag&	operator= (const atomic_flag&) = delete;
+    void		clear (memory_order order = memory_order_seq_cst)
+			    { __atomic_clear (&_v, order); }
+    bool		test_and_set (memory_order order = memory_order_seq_cst)
+			    { return __atomic_test_and_set (&_v, order); }
+};
+#define ATOMIC_FLAG_INIT	{false}
+
+namespace {
+
+template <typename T>
+static inline T kill_dependency (T v) noexcept
+    { return T(v); }
+static inline void atomic_thread_fence (memory_order order) noexcept
+    { __atomic_thread_fence (order); }
+static inline void atomic_signal_fence (memory_order order) noexcept
+    { __atomic_signal_fence (order); }
+
+} // namespace
+//}}}-------------------------------------------------------------------
 
 } // namespace cwiclo
