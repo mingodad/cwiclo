@@ -38,9 +38,9 @@ private:
 //}}}-------------------------------------------------------------------
 //{{{ new and delete
 
-extern "C" void* _realloc (void* p, size_t n) MALLOCLIKE MALLOCLIKE_ARG(1);
-extern "C" void* _alloc (size_t n) MALLOCLIKE MALLOCLIKE_ARG(1);
-extern "C" void _free (void* p);
+extern "C" void* _realloc (void* p, size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(2);
+extern "C" void* _alloc (size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(1);
+extern "C" void _free (void* p) noexcept;
 
 void* operator new (size_t n);
 void* operator new[] (size_t n);
