@@ -41,8 +41,8 @@ public:
     inline constexpr auto	cbegin (void) const			{ return begin(); }
     inline constexpr auto	end (void) const			{ return begin()+size(); }
     inline constexpr auto	cend (void) const			{ return end(); }
-    inline auto			iat (size_type i) const			{ assert (i <= size()); return begin() + i; }
-    inline auto			ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
+    inline constexpr auto	iat (size_type i) const			{ assert (i <= size()); return begin() + i; }
+    inline constexpr auto	ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
     inline auto&		at (size_type i) const			{ assert (i < size()); return begin()[i]; }
     inline auto&		operator[] (size_type i) const		{ return at (i); }
     inline bool			operator== (const cmemlink& v) const	{ return size() == v.size() && 0 == memcmp (data(), v.data(), size()); }
@@ -56,7 +56,7 @@ public:
     inline void			resize (size_type sz)			{ _size = sz; }
     inline void			clear (void)				{ resize(0); }
 protected:
-    inline auto			dataw (void)				{ return _data; }
+    inline constexpr auto	dataw (void)				{ return _data; }
     inline constexpr bool	zero_terminated (void) const		{ return _zerot; }
     inline void			set_capacity (size_type c)		{ _capacity = c; }
 private:
@@ -83,10 +83,10 @@ public:
 				using cmemlink::at;
     inline constexpr		memlink (const memlink& v)		: cmemlink(v) {}
     inline			memlink (memlink&& v)			: cmemlink(move(v)) {}
-    inline auto			data (void)				{ return dataw(); }
-    inline auto			begin (void)				{ return data(); }
-    inline auto			end (void)				{ return begin()+size(); }
-    inline auto			iat (size_type i)			{ assert (i <= size()); return begin() + i; }
+    inline constexpr auto	data (void)				{ return dataw(); }
+    inline constexpr auto	begin (void)				{ return data(); }
+    inline constexpr auto	end (void)				{ return begin()+size(); }
+    inline constexpr auto	iat (size_type i)			{ assert (i <= size()); return begin() + i; }
     inline auto&		at (size_type i)			{ assert (i < size()); return begin()[i]; }
     inline auto&		operator= (const memlink& v)		{ cmemlink::operator=(v); return *this; }
     inline auto&		operator= (memlink&& v)			{ cmemlink::operator=(move(v)); return *this; }
