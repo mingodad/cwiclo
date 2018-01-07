@@ -8,6 +8,10 @@
 
 namespace cwiclo {
 
+class istream;
+class ostream;
+class sstream;
+
 class alignas(16) cmemlink {
 public:
     using value_type		= char;
@@ -55,6 +59,10 @@ public:
     void			swap (cmemlink&& v)			{ ::cwiclo::swap(_data, v._data); ::cwiclo::swap(_size, v._size); ::cwiclo::swap(_capz,v._capz); }
     inline void			resize (size_type sz)			{ _size = sz; }
     inline void			clear (void)				{ resize(0); }
+    void			link_read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
+    inline void			read (istream& is, size_type elsize = sizeof(value_type))	{ link_read (is, elsize); }
+    void			write (ostream& os, size_type elsize = sizeof(value_type)) const noexcept;
+    void			write (sstream& os, size_type elsize = sizeof(value_type)) const noexcept;
 protected:
     inline constexpr auto	dataw (void)				{ return _data; }
     inline constexpr bool	zero_terminated (void) const		{ return _zerot; }
@@ -121,6 +129,7 @@ public:
     iterator			erase (const_iterator start, size_type n) noexcept;
     void			shrink_to_fit (void) noexcept;
     void			deallocate (void) noexcept;
+    void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
 };
 
 //----------------------------------------------------------------------

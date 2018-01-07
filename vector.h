@@ -5,6 +5,7 @@
 
 #pragma once
 #include "memblock.h"
+#include "stream.h"
 
 namespace cwiclo {
 
@@ -96,11 +97,18 @@ public:
     inline void			link (const_pointer p, size_type n)	{ _data.link (p, n * sizeof(T)); }
     inline void			link (const vector& v)			{ _data.link (v); }
     inline void			link (const_pointer first, const_pointer last)	{ _data.link (first, last); }
+    void			read (istream& is);
+    void			write (ostream& os) const;
+    inline void			write (sstream& os) const;
 protected:
     inline auto			insert_hole (const_iterator ip, size_type n)	{ return iterator (_data.insert (memblock::const_iterator(ip), n*sizeof(T))); }
 private:
     memblock			_data;	///< Raw element data, consecutively stored.
 };
+
+//----------------------------------------------------------------------
+
+STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value);
 
 //----------------------------------------------------------------------
 
@@ -190,6 +198,61 @@ void vector<T>::copy_link (void)
 	_data.copy_link();
     else
 	assign (begin(), end());
+}
+
+template <typename T>
+void vector<T>::read (istream& is)
+{
+    if (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+	return _data.read (is, sizeof(T));
+    size_type n; is >> n;
+    if (stream_align<T>::value > stream_align<size_type>::value)
+	is >> ios::talign<T>();
+    if (is_trivially_copyable<T>::value) {
+	assert (is.remaining() >= n*sizeof(T));
+	const T* d = is.ptr<T>();
+	assign (d, d+n);
+	is.skip (n*sizeof(T));
+    } else {
+	resize (n);
+	for (auto& i : *this)
+	    is >> i;
+    }
+    if (stream_align<T>::value < stream_align<size_type>::value)
+	is >> ios::talign<size_type>();
+}
+
+template <typename T>
+void vector<T>::write (ostream& os) const
+{
+    if (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+	return _data.write (os, sizeof(T));
+    os << size();
+    if (stream_align<T>::value > stream_align<size_type>::value)
+	os << ios::talign<T>();
+    if (is_trivially_copyable<T>::value) {
+	copy_n (begin(), size(), os.ptr<T>());
+	os.skip (bsize());
+    } else for (const auto& i : *this)
+	os << i;
+    if (stream_align<T>::value < stream_align<size_type>::value)
+	os << ios::talign<size_type>();
+}
+
+template <typename T>
+inline void vector<T>::write (sstream& ss) const
+{
+    if (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+	return _data.write (ss, sizeof(T));
+    ss << size();
+    if (stream_align<T>::value > stream_align<size_type>::value)
+	ss << ios::talign<T>();
+    if (is_trivially_copyable<T>::value)
+	ss.skip (bsize());
+    else for (const auto& i : *this)
+	ss << i;
+    if (stream_align<T>::value < stream_align<size_type>::value)
+	ss << ios::talign<size_type>();
 }
 
 } // namespace cwiclo

@@ -5,7 +5,7 @@
 
 #include "../vector.h"
 #include "../string.h"
-#include "../mstream.h"
+#include "../stream.h"
 #include <ctype.h>
 #include <stdarg.h>
 using namespace cwiclo;

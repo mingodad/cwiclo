@@ -4,8 +4,39 @@
 // This file is free software, distributed under the MIT License.
 
 #include "memblock.h"
+#include "stream.h"
 
 namespace cwiclo {
+
+/// Reads the object from stream \p s
+void cmemlink::link_read (istream& is, size_type elsize) noexcept
+{
+    size_type n; is >> n; n *= elsize;
+    auto nskip = Align (n, stream_align<size_type>::value);
+    if (zero_terminated() && n)
+	--n;
+    if (is.remaining() < nskip)
+	return;	// errors should have been reported by the message validator
+    assert (!capacity() && "allocated memory in cmemlink; deallocate or unlink first");
+    link (is.ptr<value_type>(), n);
+    is.skip (nskip);
+}
+
+void cmemlink::write (ostream& os, size_type elsize) const noexcept
+{
+    auto sz = size(); sz /= elsize; os << sz;
+    os.write (data(), size());
+    os.align (stream_align<size_type>::value);
+}
+
+void cmemlink::write (sstream& os, size_type elsize) const noexcept
+{
+    auto sz = size(); sz /= elsize; os << sz;
+    os.write (data(), size());
+    os.align (stream_align<size_type>::value);
+}
+
+//----------------------------------------------------------------------
 
 auto memlink::insert (const_iterator ii, size_type n) noexcept -> iterator
 {
@@ -95,6 +126,20 @@ auto memblock::erase (const_iterator start, size_type n) noexcept -> iterator
     if (zero_terminated())
 	*end() = 0;
     return iat (ep);
+}
+
+/// Reads the object from stream \p s
+void memblock::read (istream& is, size_type elsize) noexcept
+{
+    size_type n; is >> n; n *= elsize;
+    auto nskip = Align (n, stream_align<size_type>::value);
+    if (zero_terminated() && n)
+	--n;
+    if (is.remaining() < nskip)
+	return;	// errors should have been reported by the message validator
+    resize (n);
+    assert (capacity() >= nskip && "resize allocates pow2-sized blocks and end will always be at least 4-grain");
+    is.read (data(), nskip);
 }
 
 } // namespace cwiclo

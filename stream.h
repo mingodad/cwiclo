@@ -210,8 +210,8 @@ private:
     const streamsize	_n;
 };
 
-auto& operator>> (istream& is, const align& v) { v.read (is); return is; }
-auto& operator>> (istream& is, const skip& v) { v.read (is); return is; }
+static inline auto& operator>> (istream& is, const align& v) { v.read (is); return is; }
+static inline auto& operator>> (istream& is, const skip& v) { v.read (is); return is; }
 
 } // namespace ios
 } // namespace cwiclo
