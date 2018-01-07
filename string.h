@@ -12,12 +12,12 @@ class string : public memblock {
 public:
 			using memblock::memblock;
     inline		string (void)					: memblock (pointer(nullptr), 0, true) {}
-    inline		string (const_pointer s1, const_pointer s2)	: memblock() { assert (s1<=s2); assign (s1, s2-s1); }
-    inline		string (const_pointer s, size_type len)		: memblock() { assign (s, len); }
+    inline		string (const_pointer s1, const_pointer s2)	: string() { assert (s1<=s2); assign (s1, s2-s1); }
+    inline		string (const_pointer s, size_type len)		: string() { assign (s, len); }
     inline constexpr	string (const_pointer s)			: memblock (s, strlen(s), true) {}
     inline		string (string&& s)				: memblock(move(s)) {}
-    inline explicit	string (const string& s)			: memblock() { assign (s); }
-    inline auto		c_str (void) const				{ assert ((!end() || *end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
+    inline explicit	string (const string& s)			: string() { assign (s); }
+    inline auto		c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
     inline auto&	back (void) const				{ return at(size()-1); }
     inline auto&	back (void)					{ return at(size()-1); }
     inline void		push_back (const_reference c)			{ resize(size()+1); back() = c; }
@@ -82,11 +82,11 @@ public:
     inline auto		find (const_reference c, const_iterator fi) const	{ return strchr (fi, c); }
     inline auto		find (const_reference c) const				{ return find (c, begin()); }
     const_iterator	rfind (const_pointer s, const_iterator fi) const noexcept;
-    inline auto		rfind (const string& s, const_iterator fi) const	{ return find (s.c_str(), fi); }
-    inline auto		rfind (const_pointer s) const				{ return find (s, begin()); }
-    inline auto		rfind (const string& s) const				{ return find (s, begin()); }
-    inline auto		rfind (const_reference c, const_iterator fi) const	{ return memchr (begin(), c, fi-begin()); }
-    inline auto		rfind (const_reference c) const				{ return find (c, begin()); }
+    inline auto		rfind (const string& s, const_iterator fi) const	{ return rfind (s.c_str(), fi); }
+    inline auto		rfind (const_pointer s) const				{ return rfind (s, end()); }
+    inline auto		rfind (const string& s) const				{ return rfind (s, end()); }
+    inline auto		rfind (const_reference c, const_iterator fi) const	{ return const_iterator (memrchr (begin(), c, fi-begin())); }
+    inline auto		rfind (const_reference c) const				{ return rfind (c, end()); }
     auto		find_first_of (const_pointer s) const noexcept		{ auto rsz = strcspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
     inline auto		find_first_of (const string& s) const			{ return find_first_of (s.c_str()); }
     auto		find_first_not_of (const_pointer s) const noexcept	{ auto rsz = strspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }

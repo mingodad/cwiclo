@@ -31,7 +31,7 @@ public:
     inline			memlink (memlink&& v)			: _data(v._data), _size(v._size), _capz(v._capz) { v._capacity = 0; }
     inline auto&		operator= (const memlink& v)		{ link (v); return *this; }
     inline auto&		operator= (memlink&& v)			{ link (v); v.unlink(); return *this; }
-    inline constexpr auto	max_size (void) const			{ return UINT32_MAX/2; }
+    inline constexpr auto	max_size (void) const			{ return UINT32_MAX/2-1; }
     inline constexpr auto	size (void) const			{ return _size; }
     inline constexpr auto	empty (void) const			{ return !size(); }
     inline constexpr auto	capacity (void) const			{ return _capacity; }
@@ -65,17 +65,14 @@ public:
     iterator			erase (const_iterator start, size_type n) noexcept;
 protected:
     inline bool			zero_terminated (void) const		{ return _zerot; }
-    inline void			set_zero_terminated (void)		{ _zerot = 1; }
     inline void			set_capacity (size_type c)		{ _capacity = c; }
-    inline auto			capz (void) const			{ return _capz; }
-    inline void			set_capz (size_type cz)			{ _capz = cz; }
 private:
     pointer			_data;			///< Pointer to the data block
     size_type			_size alignas(8);	///< Size of the data block. Aligning _size makes cmemlink 16 bytes on 32 and 64 bit platforms.
     union {
 	size_type		_capz;
 	struct {
-	    size_type		_zerot:1;
+	    bool		_zerot:1;
 	    size_type		_capacity:31;
 	};
     };

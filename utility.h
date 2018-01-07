@@ -108,7 +108,7 @@ namespace {
 }
 template <typename T>
 inline constexpr bool is_negative (const T& v)
-    { return __is_negative<T,is_signed<T>::value>(v); }
+    { return __is_negative<T,is_signed<T>::value>()(v); }
 template <typename T>
 inline constexpr auto sign (T v)
     { return (0 < v) - is_negative(v); }

@@ -4,7 +4,9 @@
 // This file is free software, distributed under the MIT License.
 
 #include "../vector.h"
+#include "../string.h"
 #include <ctype.h>
+#include <stdarg.h>
 using namespace cwiclo;
 
 //{{{ TestML -----------------------------------------------------------
@@ -180,6 +182,183 @@ static void TestVector (void)
 }
 
 //}}}-------------------------------------------------------------------
+//{{{ TestString
+
+static void MyFormat (const char* fmt, ...) PRINTFARGS(1,2);
+
+static void TestString (void)
+{
+    static const char c_TestString1[] = "123456789012345678901234567890";
+    static const char c_TestString2[] = "abcdefghijklmnopqrstuvwxyz";
+    static const char c_TestString3[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    string s1 (c_TestString1);
+    string s2 (ArrayRange (c_TestString2));
+    auto s3 (s1);
+
+    puts (s1.c_str());
+    puts (s2.c_str());
+    puts (s3.c_str());
+    s3.reserve (48);
+    s3.resize (20);
+
+    auto i = 0u;
+    for (; i < s3.size(); ++ i)
+	s3.at(i) = s3.at(i);
+    for (i = 0; i < s3.size(); ++ i)
+	s3[i] = s3[i];
+    printf ("%s\ns3.size() = %u, max_size() = ", s3.c_str(), s3.size());
+    if (s3.max_size() == UINT32_MAX/2-1)
+	printf ("MAX/2-1");
+    else
+	printf ("%u", s3.max_size());
+    printf (", capacity() = %u\n", s3.capacity());
+
+    s1.unlink();
+    s1 = c_TestString2;
+    s1 += c_TestString3;
+    s1 += '$';
+    puts (s1.c_str());
+
+    s1 = "Hello";
+    s2.deallocate();
+    s2 = "World";
+    s3 = s1 + s2;
+    puts (s3.c_str());
+    s3 = "Concatenated ";
+    s3 += s1.c_str();
+    s3 += s2;
+    s3 += " string.";
+    puts (s3.c_str());
+
+    if (s1 < s2)
+	puts ("s1 < s2");
+    if (s1 == s1)
+	puts ("s1 == s1");
+    if (s1[0] != s1[0])
+	puts ("s1[0] != s1[0]");
+
+    string s4;
+    s4.link (s1);
+    if (s1 == s4)
+	puts ("s1 == s4");
+
+    s1 = c_TestString1;
+    string s5 (s1.begin() + 4, s1.begin() + 4 + 5);
+    string s6 (s1.begin() + 4, s1.begin() + 4 + 5);
+    if (s5 == s6)
+	puts (string::createf("%s == %s", s5.c_str(), s6.c_str()).c_str());
+    string tail (s1.iat(7), s1.end());
+    printf ("&s1[7] =\t%s\n", tail.c_str());
+
+    printf ("initial:\t%s\n", s1.c_str());
+    printf ("erase([5]-9)\t");
+    s1.erase (s1.iat(5), s1.find('9')-s1.iat(5));
+    printf ("%s\n", s1.c_str());
+    printf ("erase(5,5)\t");
+    s1.erase (s1.iat(5), 2U);
+    s1.erase (s1.iat(5), 3);
+    assert (!*s1.end());
+    puts (s1.c_str());
+    printf ("push_back('x')\t");
+    s1.push_back ('x');
+    assert (!*s1.end());
+    puts (s1.c_str());
+    printf ("pop_back()\n");
+    s1.pop_back();
+    assert (!*s1.end());
+    printf ("insert(10,#)\t");
+    s1.insert (s1.iat(10), '#');
+    assert (!*s1.end());
+    puts (s1.c_str());
+    printf ("replace(0,5,@)\t");
+    s1.replace (s1.begin(), s1.iat(5), 2, '@');
+    assert (!*s1.end());
+    puts (s1.c_str());
+
+    s1 = c_TestString1;
+    printf ("8 found at\t%s\n", s1.find('8'));
+    printf ("8 found again\t%s\n", s1.find ('8',s1.find('8')+1));
+    printf ("9 found at\t%s\n", s1.find ("9"));
+    printf ("7 rfound at\t%s\n", s1.rfind ('7'));
+    printf ("7 rfound again\t%s\n", s1.rfind('7', s1.rfind('7') - 1));
+    printf ("67 rfound at\t%s\n", s1.rfind ("67"));
+    if (!s1.rfind("X"))
+	puts ("X was not rfound");
+    else
+	printf ("X rfound at\t%s\n", s1.rfind ("X"));
+    auto poundfound = s1.find ("#");
+    if (poundfound)
+	printf ("# found at\t%s\n", poundfound);
+    printf ("[456] found at\t%s\n", s1.find_first_of ("456"));
+
+    s2.clear();
+    assert (!*s2.end());
+    if (s2.empty())
+	printf ("s2 is empty [%s], capacity %u bytes\n", s2.c_str(), s2.capacity());
+
+    s2.assignf ("<const] %d, %s, 0x%08X", 42, "[rfile>", 0xDEADBEEF);
+    s2.appendf (", 0%o, appended", 012345);
+    s2.insertf (s2.iat(31), "; %u, inserted", 12345);
+    printf ("<%u bytes of %u> Format '%s'\n", s2.size(), s2.capacity(), s2.c_str());
+    MyFormat ("'<const] %d, %s, 0x%08X'", 42, "[rfile>", 0xDEADBEEF);
+}
+
+static void MyFormat (const char* fmt, ...)
+{
+    string buf;
+    va_list args;
+    va_start (args, fmt);
+    buf.assignv (fmt, args);
+    printf ("Custom vararg MyFormat: %s\n", buf.c_str());
+    va_end (args);
+}
+//}}}-------------------------------------------------------------------
+//{{{ TestStringVector
+
+static inline void PrintString (const string& str)
+{
+    printf ("%s\n", str.c_str());
+}
+
+static void TestStringVector (void)
+{
+    vector<string> v = { "Hello world!", "Hello again!", "element3", "element4", "element5_long_element5" };
+
+    auto bogusi = linear_search (v.begin(), v.end(), string("bogus"));
+    if (bogusi)
+	printf ("bogus found at position %zd\n", bogusi - v.begin());
+
+    foreach (i,v) PrintString(*i);
+
+    if (!(v[2] == string("element3")))
+	printf ("operator== failed\n");
+    auto el3i = linear_search (v.begin(), v.end(), string("element3"));
+    if (el3i)
+	printf ("%s found at position %zd\n", el3i->c_str(), el3i - v.begin());
+    bogusi = linear_search (v.begin(), v.end(), string("bogus"));
+    if (bogusi)
+	printf ("%s found at position %zd\n", bogusi->c_str(), bogusi - v.begin());
+
+    vector<string> v2;
+    v2 = v;
+    v = v2;
+    v.erase (v.end(), v.end());
+    printf ("After erase (end,end):\n");
+    foreach (i,v) PrintString(*i);
+    v = v2;
+    v.erase (v.begin() + 2, 2);
+    printf ("After erase (2,2):\n");
+    foreach (i,v) PrintString(*i);
+    v = v2;
+    v.pop_back();
+    printf ("After pop_back():\n");
+    foreach (i,v) PrintString(*i);
+    v = v2;
+    v.insert (v.begin() + 1, v2.begin() + 1, v2.begin() + 1 + 3);
+    printf ("After insert(1,1,3):\n");
+    foreach (i,v) PrintString(*i);
+}
+//}}}-------------------------------------------------------------------
 
 int main (void)
 {
@@ -187,7 +366,9 @@ int main (void)
     static const stdtestfunc_t c_Tests[] = {
 	TestML,
 	TestMB,
-	TestVector
+	TestVector,
+	TestString,
+	TestStringVector
     };
     for (auto i = 0u; i < ArraySize(c_Tests); ++i) {
 	printf ("######################################################################\n");

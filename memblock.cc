@@ -33,9 +33,7 @@ void memblock::reserve (size_type sz) noexcept
 	return;
     sz = NextPow2 (sz);
     auto oldBlock (capacity() ? data() : nullptr);
-    auto newBlock = reinterpret_cast<pointer> (realloc (oldBlock, sz));
-    if (!newBlock)
-	abort();
+    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, sz));
     if (!oldBlock && data())
 	memcpy (newBlock, data(), min (size() + zero_terminated(), sz));
     link (newBlock, size());

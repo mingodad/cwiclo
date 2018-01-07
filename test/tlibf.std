@@ -30,3 +30,66 @@ A::~A
 deallocating
 A::~A
 A::~A
+######################################################################
+123456789012345678901234567890
+abcdefghijklmnopqrstuvwxyz
+123456789012345678901234567890
+12345678901234567890
+s3.size() = 20, max_size() = MAX/2-1, capacity() = 64
+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$
+HelloWorld
+Concatenated HelloWorld string.
+s1 < s2
+s1 == s1
+s1 == s4
+56789 == 56789
+&s1[7] =	89012345678901234567890
+initial:	123456789012345678901234567890
+erase([5]-9)	123459012345678901234567890
+erase(5,5)	1234545678901234567890
+push_back('x')	1234545678901234567890x
+pop_back()
+insert(10,#)	1234545678#901234567890
+replace(0,5,@)	@@45678#901234567890
+8 found at	89012345678901234567890
+8 found again	8901234567890
+9 found at	9012345678901234567890
+7 rfound at	7890
+7 rfound again	78901234567890
+67 rfound at	67890
+X was not rfound
+[456] found at	456789012345678901234567890
+s2 is empty [], capacity 8 bytes
+<66 bytes of 128> Format '<const] 42, [rfile>, 0xDEADBEEF; 12345, inserted, 012345, appended'
+Custom vararg MyFormat: '<const] 42, [rfile>, 0xDEADBEEF'
+######################################################################
+Hello world!
+Hello again!
+element3
+element4
+element5_long_element5
+element3 found at position 2
+After erase (end,end):
+Hello world!
+Hello again!
+element3
+element4
+element5_long_element5
+After erase (2,2):
+Hello world!
+Hello again!
+element5_long_element5
+After pop_back():
+Hello world!
+Hello again!
+element3
+element4
+After insert(1,1,3):
+Hello world!
+Hello again!
+element3
+element4
+Hello again!
+element3
+element4
+element5_long_element5

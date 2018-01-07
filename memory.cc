@@ -16,7 +16,11 @@ extern "C" void* _realloc (void* p, size_t n)
 
 extern "C" void* _alloc (size_t n)
 {
-    return _realloc (nullptr, n);
+    auto p = _realloc (nullptr, n);
+    #ifndef NDEBUG
+	memset (p, 0xcd, n);
+    #endif
+    return p;
 }
 
 extern "C" void _free (void* p)
