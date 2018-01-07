@@ -172,6 +172,14 @@ static void TestVector (void)
     v.erase (v.end()-2);
     v.pop_back();
     PrintVector (v);
+    sort (v);
+    PrintVector (v);
+    printf ("lower_bound(7): %tu\n", lower_bound (v,7)-v.begin());
+    printf ("upper_bound(7): %tu\n", upper_bound (v,7)-v.begin());
+    printf ("binary_search(3): %tu\n", binary_search (v,3)-v.begin());
+    auto s42 = binary_search (v, 42);
+    if (s42)
+	printf ("binary_search(42): %tu\n", s42-v.begin());
 
     puts ("Constructing vector<A>(3)");
     vector<A> av (3);
@@ -325,20 +333,20 @@ static void TestStringVector (void)
 {
     vector<string> v = { "Hello world!", "Hello again!", "element3", "element4", "element5_long_element5" };
 
-    auto bogusi = linear_search (v.begin(), v.end(), string("bogus"));
+    auto bogusi = linear_search (v, string("bogus"));
     if (bogusi)
-	printf ("bogus found at position %zd\n", bogusi - v.begin());
+	printf ("bogus found at position %td\n", bogusi - v.begin());
 
     foreach (i,v) PrintString(*i);
 
     if (!(v[2] == string("element3")))
 	printf ("operator== failed\n");
-    auto el3i = linear_search (v.begin(), v.end(), string("element3"));
+    auto el3i = linear_search (v, string("element3"));
     if (el3i)
-	printf ("%s found at position %zd\n", el3i->c_str(), el3i - v.begin());
-    bogusi = linear_search (v.begin(), v.end(), string("bogus"));
+	printf ("%s found at position %td\n", el3i->c_str(), el3i - v.begin());
+    bogusi = linear_search (v, string("bogus"));
     if (bogusi)
-	printf ("%s found at position %zd\n", bogusi->c_str(), bogusi - v.begin());
+	printf ("%s found at position %td\n", bogusi->c_str(), bogusi - v.begin());
 
     vector<string> v2;
     v2 = v;
@@ -358,6 +366,16 @@ static void TestStringVector (void)
     v.insert (v.begin() + 1, v2.begin() + 1, v2.begin() + 1 + 3);
     printf ("After insert(1,1,3):\n");
     foreach (i,v) PrintString(*i);
+    v = v2;
+    sort (v);
+    printf ("After sort:\n");
+    foreach (i,v) PrintString(*i);
+    el3i = binary_search (v, string("element3"));
+    if (el3i)
+	printf ("%s found at position %td\n", el3i->c_str(), el3i - v.begin());
+    bogusi = binary_search (v, string("bogus"));
+    if (bogusi)
+	printf ("%s found at position %td\n", bogusi->c_str(), bogusi - v.begin());
 }
 //}}}-------------------------------------------------------------------
 //{{{ TestStreams ------------------------------------------------------

@@ -461,10 +461,11 @@ auto upper_bound (I f, I l, const T& v)
 }
 
 template <typename T>
-int c_compare (const void* v1, const void* v2)
+int c_compare (const void* p1, const void* p2)
 {
-    auto t1 = (const T*) v1, t2 = (const T*) v2;
-    return t1 < t2 ? -1 : (t2 < t1 ? 1 : 0);
+    auto& v1 = *(const T*) p1;
+    auto& v2 = *(const T*) p2;
+    return v1 < v2 ? -1 : (v2 < v1 ? 1 : 0);
 }
 
 template <typename I>
@@ -473,6 +474,22 @@ void sort (I f, I l)
     using value_type = typename iterator_traits<I>::value_type;
     qsort (f, l-f, sizeof(value_type), c_compare<value_type>);
 }
+
+template <typename Container>
+auto lower_bound (const Container& c, typename Container::const_reference v)
+    { return lower_bound (c.begin(), c.end(), v); }
+template <typename Container>
+auto upper_bound (const Container& c, typename Container::const_reference v)
+    { return upper_bound (c.begin(), c.end(), v); }
+template <typename Container>
+auto binary_search (const Container& c, typename Container::const_reference v)
+    { return binary_search (c.begin(), c.end(), v); }
+template <typename Container>
+auto linear_search (const Container& c, typename Container::const_reference v)
+    { return linear_search (c.begin(), c.end(), v); }
+template <typename Container>
+void sort (Container& c)
+    { sort (c.begin(), c.end()); }
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------
