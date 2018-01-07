@@ -23,6 +23,7 @@ public:
     inline constexpr		istream (const_pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
     inline constexpr		istream (const cmemlink& m)			: istream(m.data(),m.size()) {}
+    inline constexpr		istream (const istream& is) = default;
     inline constexpr auto	end (void) const	{ return _e; }
     inline constexpr streamsize	remaining (void) const	{ return end()-_p; }
     template <typename T>
@@ -68,6 +69,7 @@ public:
     inline constexpr		ostream (pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		ostream (pointer p, streamsize sz)	: ostream(p,p+sz) {}
     inline constexpr		ostream (memlink& m)			: ostream(m.data(),m.size()) {}
+    inline constexpr		ostream (const ostream& os) = default;
     inline constexpr auto	end (void) const	{ return _e; }
     inline constexpr streamsize	remaining (void) const	{ return end()-_p; }
     template <typename T>
@@ -117,6 +119,7 @@ public:
     enum { is_reading = false, is_writing = false, is_sizing = true };
 public:
     inline constexpr		sstream (void)		: _sz() {}
+    inline constexpr		sstream (const sstream& ss) = default;
     inline constexpr auto	size (void) const	{ return _sz; }
     inline constexpr streamsize	remaining (void) const	{ return UINT32_MAX; }
     inline void			skip (streamsize sz)	{ _sz += sz; }

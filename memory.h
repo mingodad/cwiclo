@@ -348,8 +348,8 @@ auto fill_n (I first, ssize_t n, const T& v)
 extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
 
 template <typename T>
-void rotate (T* f, T* m, T* l)
-    { brotate (f, m, l); }
+T* rotate (T* f, T* m, T* l)
+    { brotate (f, m, l); return f; }
 
 //}}}-------------------------------------------------------------------
 //{{{ uninitialized fill and copy

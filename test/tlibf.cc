@@ -4,6 +4,7 @@
 // This file is free software, distributed under the MIT License.
 
 #include "../vector.h"
+#include "../set.h"
 #include "../string.h"
 #include "../stream.h"
 #include <ctype.h>
@@ -188,6 +189,20 @@ static void TestVector (void)
     puts ("erase 2");
     av.erase (av.iat(2), 2);
     puts ("deallocating");
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ TestSet
+
+static void TestSet (void)
+{
+    set<int> v {1, 8, 9, 2, 3, 1, 1};
+    v.insert ({4, 6, 1, 3, 4});
+    printf ("set:\t\t");
+    PrintVector (v);
+    printf ("erase(3):\t");
+    v.erase (3);
+    PrintVector (v);
 }
 
 //}}}-------------------------------------------------------------------
@@ -493,6 +508,7 @@ int main (void)
 	TestML,
 	TestMB,
 	TestVector,
+	TestSet,
 	TestString,
 	TestStringVector,
 	TestStreams
