@@ -30,7 +30,7 @@ DOCDIR		:= @docdir@
 ################ Compiler options ####################################
 
 CXXFLAGS	:= -Wall -Wextra -Wredundant-decls -Wshadow \
-		-std=c++17 -fno-exceptions -fno-rtti \
+		-std=c++17 -fno-exceptions -fno-rtti -fno-threadsafe-statics \
 		-ffunction-sections -fdata-sections \
 		-no-pie -fno-stack-protector
 ifdef DEBUG

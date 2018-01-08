@@ -3,6 +3,7 @@
 // Copyright (c) 2018 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the MIT License.
 
+#include "../app.h"
 #include "../vector.h"
 #include "../set.h"
 #include "../string.h"
@@ -11,9 +12,33 @@
 #include <stdarg.h>
 using namespace cwiclo;
 
-//{{{ TestML -----------------------------------------------------------
+//{{{ LibTestApp -------------------------------------------------------
 
-static void WriteML (const memlink& l)
+class LibTestApp : public App {
+public:
+    static auto&	Instance (void) { static LibTestApp s_App; return s_App; }
+    inline int		Run (void);
+private:
+    inline		LibTestApp (void) : App() {}
+    static void		TestML (void);
+    static void		TestMB (void);
+    static void		TestVector (void);
+    static void		TestSet (void);
+    static void		TestString (void);
+    static void		TestStringVector (void);
+    static void		TestStreams (void);
+    static void		WriteML (const memlink& l);
+    static void		WriteMB (const memblock& l);
+    static void		PrintVector (const vector<int>& v);
+    static vector<int>	MakeIotaVector (unsigned n);
+    static vector<int>	SubtractVector (const vector<int>& v1, const vector<int>& v2);
+    static void		PrintString (const string& str);
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ TestML
+
+void LibTestApp::WriteML (const memlink& l) // static
 {
     printf ("memlink{%u}: ", l.size());
     for (auto c : l)
@@ -21,7 +46,7 @@ static void WriteML (const memlink& l)
     putchar ('\n');
 }
 
-static void TestML (void)
+void LibTestApp::TestML (void) // static
 {
     char str[] = "abcdefghijklmnopqrstuvwzyz";
     memlink::const_pointer cstr = str;
@@ -61,7 +86,7 @@ static void TestML (void)
 //}}}-------------------------------------------------------------------
 //{{{ TestMB
 
-static void WriteMB (const memblock& l)
+void LibTestApp::WriteMB (const memblock& l) // static
 {
     printf ("memblock{%u}: ", l.size());
     for (auto c : l)
@@ -69,7 +94,7 @@ static void WriteMB (const memblock& l)
     putchar ('\n');
 }
 
-static void TestMB (void)
+void LibTestApp::TestMB (void) // static
 {
     char strTest[] = "abcdefghijklmnopqrstuvwxyz";
     const auto strTestLen = strlen(strTest);
@@ -120,7 +145,7 @@ static void TestMB (void)
 //}}}-------------------------------------------------------------------
 //{{{ TestVector
 
-static void PrintVector (const vector<int>& v)
+void LibTestApp::PrintVector (const vector<int>& v) // static
 {
     putchar ('{');
     for (auto i = 0u; i < v.size(); ++i) {
@@ -131,7 +156,7 @@ static void PrintVector (const vector<int>& v)
     puts ("}");
 }
 
-static vector<int> MakeIotaVector (unsigned n)
+vector<int> LibTestApp::MakeIotaVector (unsigned n) // static
 {
     vector<int> r (n);
     for (auto i = 0u; i < r.size(); ++i)
@@ -139,7 +164,7 @@ static vector<int> MakeIotaVector (unsigned n)
     return r;
 }
 
-static vector<int> SubtractVector (const vector<int>& v1, const vector<int>& v2)
+vector<int> LibTestApp::SubtractVector (const vector<int>& v1, const vector<int>& v2) // static
 {
     vector<int> r (v1.begin(), v1.iat(min(v1.size(),v2.size())));
     for (auto i = 0u; i < r.size(); ++i)
@@ -152,7 +177,7 @@ struct A {
     ~A (void) { puts ("A::~A"); }
 };
 
-static void TestVector (void)
+void LibTestApp::TestVector (void) // static
 {
     const vector<int> vstd { 8,3,1,2,5,6,1,3,4,9 };
     PrintVector (vstd);
@@ -194,7 +219,7 @@ static void TestVector (void)
 //}}}-------------------------------------------------------------------
 //{{{ TestSet
 
-static void TestSet (void)
+void LibTestApp::TestSet (void) // static
 {
     set<int> v {1, 8, 9, 2, 3, 1, 1};
     v.insert ({4, 6, 1, 3, 4});
@@ -209,8 +234,17 @@ static void TestSet (void)
 //{{{ TestString
 
 static void MyFormat (const char* fmt, ...) PRINTFARGS(1,2);
+static void MyFormat (const char* fmt, ...)
+{
+    string buf;
+    va_list args;
+    va_start (args, fmt);
+    buf.assignv (fmt, args);
+    printf ("Custom vararg MyFormat: %s\n", buf.c_str());
+    va_end (args);
+}
 
-static void TestString (void)
+void LibTestApp::TestString (void) // static
 {
     static const char c_TestString1[] = "123456789012345678901234567890";
     static const char c_TestString2[] = "abcdefghijklmnopqrstuvwxyz";
@@ -327,24 +361,15 @@ static void TestString (void)
     MyFormat ("'<const] %d, %s, 0x%08X'", 42, "[rfile>", 0xDEADBEEF);
 }
 
-static void MyFormat (const char* fmt, ...)
-{
-    string buf;
-    va_list args;
-    va_start (args, fmt);
-    buf.assignv (fmt, args);
-    printf ("Custom vararg MyFormat: %s\n", buf.c_str());
-    va_end (args);
-}
 //}}}-------------------------------------------------------------------
 //{{{ TestStringVector
 
-static inline void PrintString (const string& str)
+void LibTestApp::PrintString (const string& str) // static
 {
-    printf ("%s\n", str.c_str());
+    puts (str.c_str());
 }
 
-static void TestStringVector (void)
+void LibTestApp::TestStringVector (void) // static
 {
     vector<string> v = { "Hello world!", "Hello again!", "element3", "element4", "element5_long_element5" };
 
@@ -393,9 +418,9 @@ static void TestStringVector (void)
 	printf ("%s found at position %td\n", bogusi->c_str(), bogusi - v.begin());
 }
 //}}}-------------------------------------------------------------------
-//{{{ TestStreams ------------------------------------------------------
+//{{{ TestStreams
 
-static void TestStreams (void)
+void LibTestApp::TestStreams (void) // static
 {
     const uint8_t magic_Char = 0x12;
     const uint16_t magic_Short = 0x1234;
@@ -499,9 +524,10 @@ static void TestStreams (void)
 	putchar ('\n');
     }
 }
-//}}}
+//}}}-------------------------------------------------------------------
+//{{{ Run tests
 
-int main (void)
+int LibTestApp::Run (void)
 {
     using stdtestfunc_t	= void (*)(void);
     static const stdtestfunc_t c_Tests[] = {
@@ -519,3 +545,7 @@ int main (void)
     }
     return EXIT_SUCCESS;
 }
+
+CwicloMain (LibTestApp)
+
+//}}}-------------------------------------------------------------------
