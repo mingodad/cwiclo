@@ -35,7 +35,7 @@ public:
     inline			cmemlink (cmemlink&& v)			: _data(v._data), _size(v._size), _capz(v._capz) { v._capacity = 0; }
     inline auto&		operator= (const cmemlink& v)		{ link (v); return *this; }
     inline auto&		operator= (cmemlink&& v)		{ swap (move(v)); return *this; }
-    inline constexpr auto	max_size (void) const			{ return UINT32_MAX/2-1; }
+    inline constexpr auto	max_size (void) const			{ return numeric_limits<size_type>::max()/2-1; }
     inline constexpr auto	size (void) const			{ return _size; }
     inline constexpr auto	empty (void) const			{ return !size(); }
     inline constexpr auto	capacity (void) const			{ return _capacity; }

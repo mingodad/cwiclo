@@ -265,7 +265,7 @@ void LibTestApp::TestString (void) // static
     for (i = 0; i < s3.size(); ++ i)
 	s3[i] = s3[i];
     printf ("%s\ns3.size() = %u, max_size() = ", s3.c_str(), s3.size());
-    if (s3.max_size() == UINT32_MAX/2-1)
+    if (s3.max_size() == numeric_limits<string::size_type>::max()/2-1)
 	printf ("MAX/2-1");
     else
 	printf ("%u", s3.max_size());
@@ -546,6 +546,7 @@ int LibTestApp::Run (void)
     return EXIT_SUCCESS;
 }
 
-CwicloMain (LibTestApp)
+BEGIN_CWICLO_APP (LibTestApp)
+END_CWICLO_APP
 
 //}}}-------------------------------------------------------------------

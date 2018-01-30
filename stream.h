@@ -43,11 +43,13 @@ public:
 				    return v;
 				}
     template <typename T>
-    inline void			readv (T& v) __restrict__ {
+    inline auto&		readv (void) __restrict__ {
 				    const T* __restrict__ p = ptr<T>();
-				    v = *p;
 				    skip(sizeof(T));
+				    return *p;
 				}
+    template <typename T>
+    inline void			readv (T& v) __restrict__ { v = readv<T>(); }
     template <typename T>
     inline istream&		operator>> (T& v);
 protected:
@@ -178,6 +180,25 @@ inline constexpr auto stream_align_of (const T&) { return stream_align<T>::value
 
 #define STREAM_ALIGN(type,grain)	\
     template <> struct stream_align<type> { static constexpr const streamsize value = grain; }
+
+//}}}-------------------------------------------------------------------
+//{{{ Variadic serialization
+
+template <typename STM>
+inline void variadic_read (STM&) { }
+template <typename STM, typename T, typename... Args>
+inline void variadic_read (STM& is, T& v, Args&... args)
+    { is >> v; variadic_read (is, args...); }
+
+template <typename STM>
+inline void variadic_write (STM&) { }
+template <typename STM, typename T, typename... Args>
+inline void variadic_write (STM& os, const T& v, const Args&... args)
+    { os << v; variadic_write (os, args...); }
+
+template <typename... Args>
+inline auto variadic_stream_size (const Args&... args)
+    { sstream ss; variadic_write (ss, args...); return ss.size(); }
 
 //}}}-------------------------------------------------------------------
 //{{{ stream operators

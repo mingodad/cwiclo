@@ -200,6 +200,11 @@ template <typename F>
 auto make_scope_exit (F&& f) noexcept
     { return scope_exit<remove_reference_t<F>>(forward<F>(f)); }
 
+extern "C" void print_backtrace (void) noexcept;
+#ifndef UC_VERSION
+extern "C" void hexdump (const void* vp, size_t n) noexcept;
+#endif
+
 //}}}-------------------------------------------------------------------
 //{{{ construct and destroy
 

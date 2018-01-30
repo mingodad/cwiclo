@@ -44,9 +44,23 @@ template <> struct make_unsigned<int>		{ using type = unsigned int; };
 template <> struct make_unsigned<long>		{ using type = unsigned long; };
 template <typename T> using make_unsigned_t = typename make_unsigned<T>::type;
 
-template <typename T> struct is_signed : public integral_constant<bool, is_same<T,make_unsigned_t<T>>::value> {};
+template <typename T> struct is_signed : public integral_constant<bool, !is_same<T,make_unsigned_t<T>>::value> {};
 
 template <typename T> struct bits_in_type	{ static constexpr const size_t value = sizeof(T)*8; };
+
+//}}}-------------------------------------------------------------------
+//{{{ numeric limits
+
+template <typename T>
+struct numeric_limits {
+private:
+    using base_type = remove_reference_t<T>;
+public:
+    static constexpr const bool is_signed = is_signed<T>::value;	///< True if the type is signed.
+    static constexpr const bool is_integral = is_trivial<T>::value;	///< True if fixed size and cast-copyable.
+    static inline constexpr auto min (void)	{ return is_signed ? base_type(1)<<(bits_in_type<base_type>::value-1) : base_type(0); }
+    static inline constexpr auto max (void)	{ return base_type(min()-1); }
+};
 
 //}}}-------------------------------------------------------------------
 //{{{ Array macros
