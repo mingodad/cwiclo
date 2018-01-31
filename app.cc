@@ -10,8 +10,8 @@
 //{{{ Timer interface --------------------------------------------------
 namespace cwiclo {
 
-const ITimer i_Timer = { "Timer", { "Watch\0uix", nullptr }};
-const ITimerR i_TimerR = { "TimerR", { "Timer\0i", nullptr }};
+DEFINE_INTERFACE (Timer, "Watch\0uix");
+DEFINE_INTERFACE (TimerR, "Timer\0i");
 
 auto ITimer::Now (void) noexcept -> mstime_t
 {
@@ -71,7 +71,11 @@ void App::FatalSignalHandler (int sig) // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set()) {
-	printf ("[S] Error: %s\n", strsignal(sig));
+        #if HAVE_STRSIGNAL
+	    printf ("[S] Error: %s\n", strsignal(sig));
+	#else
+	    printf ("[S] Error: %d\n", sig);
+	#endif
 	#ifndef NDEBUG
 	    print_backtrace();
 	#endif
@@ -89,16 +93,16 @@ void App::MsgSignalHandler (int sig) // static
 #undef S
 
 //}}}-------------------------------------------------------------------
-//{{{ Msger creation
+//{{{ Msger lifecycle
 
 mrid_t App::AllocateMrid (void) noexcept
 {
     mrid_t id = 0;
     for (; id < _msgers.size(); ++id)
 	if (_msgers[id] == nullptr)
-	    return id + mrid_First;
+	    return MridFromIndex(id);
     _msgers.emplace_back (nullptr);
-    return id + mrid_First;
+    return MridFromIndex(id);
 }
 
 Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
@@ -135,41 +139,65 @@ Msg::Link& App::CreateLink (Msg::Link& l, iid_t iid) noexcept
     return l;
 }
 
+void App::DeleteMsger (mrid_t mid) noexcept
+{
+    auto& m = _msgers[IndexFromMrid(mid)];
+    if (!m.created())
+	return;
+    // Notify connected Msgers of this one's destruction
+    for (auto& u : _msgers)
+	if (u.created() && u->MsgerId() != m->MsgerId() && (u->CreatorId() == m->MsgerId() || u->MsgerId() == m->CreatorId()))
+	    u->OnMsgerDestroyed (m->MsgerId());	// this may mark u unused
+    m.destroy();
+    // Destroying does release the mrid slot; that must be done explicitly.
+}
+
+void App::DeleteUnusedMsgers (void) noexcept
+{
+    // A Msger is unused if it has f_Unused flag set and has no pending messages in _outq
+    for (auto& m : _msgers)
+	if (m.created() && m->Flag(f_Unused) && !HasMessagesFor (m->MsgerId()))
+	    DeleteMsger (m->MsgerId());
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ Message loop
 
 int App::Run (void) noexcept
 {
-    while (!Flag (f_Quitting)) {
-	_inq.clear();
-	_inq.swap (move(_outq));
+    while (!Flag (f_Quitting)) {	// quitting flag is set by calling App::Quit
+	// Setup the queues
+	_inq.clear();			// input queue was processed on the last iteration
+	_inq.swap (move(_outq));	// output queue now becomes the input queue
 	if (_inq.empty()) {
 	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
-	    break;
+	    break;			// running out of packets is usually not what you want, but not exactly an error
 	}
+
+	// Dispatch all messages in the input queue
 	for (auto& msg : _inq) {
-	    #ifndef NDEBUG
-		if (DEBUG_MSG_TRACE) {
-		    DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.InterfaceName(), msg.Method(), msg.Size());
-		    auto msgbody = msg.Read();
-		    hexdump (msgbody.ptr<char>(), msgbody.remaining());
-		    DEBUG_PRINTF ("}""}}\n");
-		}
-	    #endif
-	    // To use the same dispatch code for broadcast, always operate on a range
+	    // Dump the message if tracing
+	    if (DEBUG_MSG_TRACE) {
+		DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.InterfaceName(), msg.Method(), msg.Size());
+		auto msgbody = msg.Read();
+		hexdump (msgbody.ptr<char>(), msgbody.remaining());
+		DEBUG_PRINTF ("}""}}\n");
+	    }
+
+	    // Create the dispatch range. Broadcast messages go to all, the rest go to one.
 	    auto mg = 0u, mgend = _msgers.size();
 	    if (msg.Dest() != mrid_Broadcast) {
 		if (!ValidMsgerId (msg.Dest())) {
 		    DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.Dest());
 		    continue;
 		}
-		mg = msg.Dest()-mrid_First;
+		mg = IndexFromMrid (msg.Dest());
 		mgend = mg+1;
 	    }
 	    for (; mg < mgend; ++mg) {
 		auto& msger = _msgers[mg];
 		if (!msger.created())
-		    continue; // errors for msger creation failures were reported in CreateMsger
+		    continue; // errors for msger creation failures were reported in CreateMsger; here just try to continue
 
 		auto accepted = msger->Dispatch(msg);
 
@@ -177,8 +205,56 @@ int App::Run (void) noexcept
 		    DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger. Did you forget to add the interface to the Dispatch override?\n");
 	    }
 	}
+	// End-of-iteration housekeeping
+	DeleteUnusedMsgers();
+	// Wait for timers or fds to fire, blocking if there are no messages
+	RunTimers();
     }
     return s_ExitCode;
+}
+
+App::msgq_t::size_type App::HasMessagesFor (mrid_t mid) const noexcept
+{
+    App::msgq_t::size_type n = 0;
+    for (auto& msg : _outq)
+	if (msg.Dest() == mid)
+	    ++n;
+    return n;
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Timers
+
+void App::RunTimers (void) noexcept
+{
+    if (_timers.empty())
+	return;
+
+    // Populate the fd list and find the nearest timer
+    pollfd fds [_timers.size()];
+    int timeout;
+    auto nfds = GetPollTimerList (fds, _timers.size(), timeout);
+    if (!nfds && !timeout)
+	return;
+    if (!_outq.empty())	// do not wait if there are messages to process
+	timeout = 0;
+
+    // And wait
+    if (DEBUG_MSG_TRACE) {
+	if (timeout > 0)
+	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
+	else if (timeout < 0)
+	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
+	else if (!timeout)
+	    DEBUG_PRINTF ("[I] Checking ");
+	DEBUG_PRINTF ("%u file descriptors from %u timers", nfds, _timers.size());
+    }
+
+    // And poll
+    poll (fds, nfds, timeout);
+
+    // Then, check timers for expiration
+    CheckPollTimers (fds);
 }
 
 unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept
@@ -205,7 +281,7 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
     return npfd;
 }
 
-bool App::CheckTimers (const pollfd* fds) noexcept
+void App::CheckPollTimers (const pollfd* fds) noexcept
 {
     // Poll errors are checked for each fd with POLLERR. Other errors are ignored.
     // poll will exit when there are fds available or when the timer expires
@@ -234,37 +310,6 @@ bool App::CheckTimers (const pollfd* fds) noexcept
 	    t->Fire();
 	cfd += hasFd;
     }
-    return _timers.size();
-}
-
-bool App::RunTimers (void) noexcept
-{
-    if (_timers.empty())
-	return false;
-
-    // Populate the fd list and find the nearest timer
-    pollfd fds [_timers.size()];
-    int timeout;
-    auto nfds = GetPollTimerList (fds, _timers.size(), timeout);
-    if (!nfds && !timeout)
-	return false;
-
-    // And wait
-    if (DEBUG_MSG_TRACE) {
-	if (timeout > 0)
-	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
-	else if (timeout < 0)
-	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
-	else if (!timeout)
-	    DEBUG_PRINTF ("[I] Checking ");
-	DEBUG_PRINTF ("%u file descriptors from %u timers", nfds, _timers.size());
-    }
-
-    // And poll
-    poll (fds, nfds, timeout);
-
-    // Then, check timers for expiration
-    return CheckTimers (fds);
 }
 
 } // namespace cwiclo

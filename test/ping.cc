@@ -5,11 +5,5 @@
 
 #include "ping.h"
 
-const IPing i_Ping = {
-    "Ping",
-    { "Ping\0u", NULL }
-};
-const IPingR i_PingR = {
-    "PingR",
-    { "Ping\0u", NULL }
-};
+DEFINE_INTERFACE (Ping, "Ping\0u");
+DEFINE_INTERFACE (PingR, "Ping\0u");

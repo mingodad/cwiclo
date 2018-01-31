@@ -5,6 +5,7 @@
 
 #pragma once
 #include "vector.h"
+#include "string.h"
 
 //{{{ Types ------------------------------------------------------------
 namespace cwiclo {
@@ -19,21 +20,22 @@ enum : mrid_t {
 };
 
 using imethod_t = int8_t;
-enum : imethod_t {
-    imethod_Invalid = -2,
-    imethod_CreateMsger = -1
-};
 
 //}}}-------------------------------------------------------------------
 //{{{ Interface
 
 struct Interface {
     const char*	name;
-    const char*	method[];
+    const char* const* method;
 public:
     inline constexpr auto Method (imethod_t i) const { return method[i]; }
 };
 using iid_t = const Interface*;
+
+// Use this to define the i_Interface variables
+// Example: DEFINE_INTERFACE (MyInterface, "Call1\0uix", "Call2\0x");
+#define DEFINE_INTERFACE(iface,...)\
+    const I##iface i_##iface = { { #iface, (const char*[]) { __VA_ARGS__, nullptr }} }
 
 //}}}-------------------------------------------------------------------
 //{{{ Msg
@@ -61,6 +63,8 @@ public:
     inline auto		InterfaceName (void) const	{ return GetInterface()->name; }
     inline auto		IMethod (void) const		{ return _imethod; }
     inline auto		Method (void) const	{ return GetInterface()->Method(IMethod()); }
+    inline auto		Extid (void) const	{ return _extid; }
+    inline auto		FdOffset (void) const	{ return _fdoffset; }
     inline istream	Read (void) const	{ return istream (_body); }
     inline ostream	Write (void)		{ return ostream (_body); }
     streamsize		Verify (void) const noexcept;
@@ -79,13 +83,14 @@ private:
 class Proxy {
 public:
     constexpr explicit	Proxy (mrid_t from, mrid_t to=mrid_New)	: _link {from,to} {}
-			Proxy (Proxy&& v)			: _link(v._link) { v._link = {}; }
+			Proxy (const Proxy&) = delete;
+    void		operator= (const Proxy&) = delete;
     constexpr auto&	Link (void) const			{ return _link; }
     constexpr auto	Src (void) const			{ return Link().src; }
     constexpr auto	Dest (void) const			{ return Link().dest; }
     Msg&		CreateMsg (iid_t iid, imethod_t imethod, streamsize sz) noexcept;
 #ifdef NDEBUG	// CommitMsg only does debug checking
-    inline void		CommitMsg (Msg&, ostream&) noexcept	{ }
+    void		CommitMsg (Msg&, ostream&) noexcept	{ }
 #else
     void		CommitMsg (Msg& msg, ostream& os) noexcept;
 #endif
@@ -93,7 +98,7 @@ public:
     inline void Send (iid_t iid, imethod_t imethod, const Args&... args) {
 	auto& msg = CreateMsg (iid, imethod, variadic_stream_size(args...));
 	auto os = msg.Write();
-	variadic_write (os, args...);
+	(os << ... << args);
 	CommitMsg (msg, os);
     }
 private:
@@ -112,14 +117,21 @@ class Msger {
 public:
     enum { f_Unused, f_Static, f_Last };
 public:
-    inline		Msger (const Msg::Link& l)	:_link(l),_flags() {}
-    inline virtual	~Msger (void) noexcept		{ }
+    virtual		~Msger (void) noexcept		{ }
+    auto		CreatorId (void) const		{ return _link.src; }
+    auto		MsgerId (void) const		{ return _link.dest; }
+    auto		Flag (unsigned f) const		{ return GetBit(_flags,f); }
     virtual bool	Dispatch (const Msg&) noexcept	{ return false; }
-    inline auto		MsgerId (void) const		{ return _link.dest; }
-    inline auto		Flag (unsigned f) const		{ return GetBit(_flags,f); }
+    virtual bool	OnError (mrid_t, const string&) noexcept
+			    { SetFlag (f_Unused); return false; }
+    virtual void	OnMsgerDestroyed (mrid_t mid) noexcept
+			    { if (mid == CreatorId()) SetFlag (f_Unused); }
 protected:
-    inline		Msger (mrid_t id)		:_link{id,id},_flags(1u<<f_Static) {}
-    inline void		SetFlag (unsigned f, bool v = true)	{ SetBit(_flags,f,v); }
+    explicit		Msger (const Msg::Link& l)	:_link(l),_flags() {}
+    explicit		Msger (mrid_t id)		:_link{id,id},_flags(1u<<f_Static) {}
+			Msger (const Msger&) = delete;
+    void		operator= (const Msger&) = delete;
+    void		SetFlag (unsigned f, bool v = true)	{ SetBit(_flags,f,v); }
 private:
     Msg::Link		_link;
     uint32_t		_flags;

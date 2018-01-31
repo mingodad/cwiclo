@@ -56,7 +56,7 @@ struct numeric_limits {
 private:
     using base_type = remove_reference_t<T>;
 public:
-    static constexpr const bool is_signed = is_signed<T>::value;	///< True if the type is signed.
+    static constexpr const bool is_signed = ::cwiclo::is_signed<T>::value;	///< True if the type is signed.
     static constexpr const bool is_integral = is_trivial<T>::value;	///< True if fixed size and cast-copyable.
     static inline constexpr auto min (void)	{ return is_signed ? base_type(1)<<(bits_in_type<base_type>::value-1) : base_type(0); }
     static inline constexpr auto max (void)	{ return base_type(min()-1); }

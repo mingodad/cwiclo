@@ -95,6 +95,7 @@ public:
     using argc_t	= int;
     using argv_t	= char* const*;
     using mstime_t	= ITimer::mstime_t;
+    using msgq_t	= vector<Msg>;
     enum { f_Quitting = Msger::f_Last, f_DebugMsgTrace, f_Last };
 public:
     static auto&	Instance (void)			{ return *s_App; }
@@ -104,10 +105,13 @@ public:
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
     Msg&		CreateMsg (Msg::Link& l, iid_t iid, imethod_t imethod, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE)
 			    { return _outq.emplace_back (CreateLink(l,iid),iid,imethod,size,extid,fdo); }
+    msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
     inline void		Quit (int ec = EXIT_SUCCESS)	{ s_ExitCode = ec; SetFlag (f_Quitting); }
+    void		DeleteUnusedMsgers (void) noexcept;
+    void		DeleteMsger (mrid_t mid) noexcept;
+    void		RunTimers (void) noexcept;
     unsigned		GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept;
-    bool		CheckTimers (const pollfd* fds) noexcept;
-    bool		RunTimers (void) noexcept;
+    void		CheckPollTimers (const pollfd* fds) noexcept;
 protected:
 			App (void);
     virtual		~App (void) noexcept;
@@ -127,25 +131,26 @@ private:
 				Msgerp (const Msgerp&) = delete;
 				~Msgerp (void) noexcept	{ reset(); }
 	constexpr pointer	get (void) const	{ return _p; }
-	inline pointer		release (void)		{ auto r(_p); _p = nullptr; return r; }
-	constexpr bool		created (void) const	{ return SLOT_IN_USE < uintptr_t(_p); }
+	pointer			release (void)		{ auto r(_p); _p = nullptr; return r; }
+	bool			created (void) const	{ return SLOT_IN_USE < uintptr_t(_p); }
 	void			reset (pointer p = nullptr) {
 				    auto q(_p);
 				    _p = p;
 				    if (SLOT_IN_USE < uintptr_t(q) && !q->Flag(f_Static))
 					delete q;
 				}
+	void			destroy (void)		{ reset (pointer(uintptr_t(SLOT_IN_USE))); }
 	void			swap (Msgerp&& v)	{ ::cwiclo::swap (_p, v._p); }
-	inline auto&		operator= (pointer p)	{ reset (p); return *this; }
-	inline auto&		operator= (Msgerp&& p)	{ reset (p.release()); return *this; }
+	auto&			operator= (pointer p)	{ reset (p); return *this; }
+	auto&			operator= (Msgerp&& p)	{ reset (p.release()); return *this; }
 	constexpr auto&		operator* (void) const	{ return *get(); }
 	constexpr pointer	operator-> (void) const	{ return get(); }
 	void			operator= (const Msgerp&) = delete;
-	inline bool		operator== (const_pointer p) const	{ return _p == p; }
-	inline bool		operator== (mrid_t id) const		{ return _p->MsgerId() == id; }
-	inline bool		operator< (mrid_t id) const		{ return _p->MsgerId() < id; }
-	inline bool		operator== (const Msgerp& p) const	{ return *this == p->MsgerId(); }
-	inline bool		operator< (const Msgerp& p) const	{ return *this < p->MsgerId(); }
+	constexpr bool		operator== (const_pointer p) const	{ return _p == p; }
+	bool			operator== (mrid_t id) const		{ return _p->MsgerId() == id; }
+	bool			operator< (mrid_t id) const		{ return _p->MsgerId() < id; }
+	bool			operator== (const Msgerp& p) const	{ return *this == p->MsgerId(); }
+	bool			operator< (const Msgerp& p) const	{ return *this < p->MsgerId(); }
     private:
 	pointer		_p;
     };
@@ -193,7 +198,9 @@ public:
 private:
     inline void		InstallSignalHandlers (void);
     mrid_t		AllocateMrid (void) noexcept;
-    auto&		MsgerpById (mrid_t id)	{ return _msgers[id-mrid_First]; }
+    auto		MridFromIndex (mrid_t idx) const	{ return idx + mrid_First; }
+    auto		IndexFromMrid (mrid_t id) const		{ return id - mrid_First; }
+    auto&		MsgerpById (mrid_t id)	{ return _msgers[IndexFromMrid(id)]; }
     pfn_msger_factory	MsgerFactoryFor (iid_t id) {
 			    for (auto mii = s_MsgerImpls; mii->iface; ++mii)
 				if (mii->iface == id)
@@ -204,8 +211,8 @@ private:
     void		AddTimer (Timer* t)	{ _timers.push_back(t); }
     void		RemoveTimer (Timer* t)	{ foreach (i, _timers) if (*i == t) --(i=_timers.erase(i)); }
 private:
-    vector<Msg>		_outq;
-    vector<Msg>		_inq;
+    msgq_t		_outq;
+    msgq_t		_inq;
     vector<Msgerp>	_msgers;
     vector<Timer*>	_timers;
     static App*		s_App;

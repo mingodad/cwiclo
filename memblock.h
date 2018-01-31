@@ -29,8 +29,8 @@ public:
     inline constexpr		cmemlink (const_pointer p, size_type n)	: cmemlink (const_cast<pointer>(p), n) {}
     inline constexpr		cmemlink (pointer p, size_type n, bool z)	: _data(p), _size(n), _zerot(z), _capacity(0) {}
     inline constexpr		cmemlink (const_pointer p, size_type n, bool z)	: cmemlink (const_cast<pointer>(p),n,z) {}
-    inline constexpr		cmemlink (void* p, size_type n)		: cmemlink (reinterpret_cast<pointer>(p), n) {}
-    inline constexpr		cmemlink (const void* p, size_type n)	: cmemlink (reinterpret_cast<const_pointer>(p), n) {}
+    inline			cmemlink (void* p, size_type n)		: cmemlink (reinterpret_cast<pointer>(p), n) {}
+    inline			cmemlink (const void* p, size_type n)	: cmemlink (reinterpret_cast<const_pointer>(p), n) {}
     inline constexpr		cmemlink (const cmemlink& v)		: _data(v._data), _size(v._size), _zerot(v._zerot), _capacity() {}
     inline			cmemlink (cmemlink&& v)			: _data(v._data), _size(v._size), _capz(v._capz) { v._capacity = 0; }
     inline auto&		operator= (const cmemlink& v)		{ link (v); return *this; }

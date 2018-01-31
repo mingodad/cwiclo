@@ -15,23 +15,17 @@
 // Define to the address where bug reports for this package should be sent.
 #define @PKG_UNAME@_BUGREPORT	"@PKG_BUGREPORT@"
 
-#undef HAVE_EXECINFO_H	// Define to 1 if you have the <execinfo.h> header file.
-#undef HAVE_INTTYPES_H	// Define to 1 if you have the <inttypes.h> header file.
-#undef HAVE_STDINT_H		// Define to 1 if you have the <stdint.h> header file.
-#undef HAVE_SYS_MMAN_H	// Define to 1 if you have the <sys/mman.h> header file.
-#undef HAVE_SYS_TYPES_H	// Define to 1 if you have the <sys/types.h> header file.
-#define HAVE_VA_COPY 1		// Define to 1 if you have the __va_copy function
 #define HAVE_STRSIGNAL 1	// Define to 1 if you have the 'strsignal' function.
 
 // Common includes
 #include <stddef.h>
 #include <stdbool.h>
-#if HAVE_SYS_TYPES_H
+#if __has_include(<sys/types.h>)
     #include <sys/types.h>
 #endif
-#if HAVE_STDINT_H
+#if __has_include(<stdint.h>)
     #include <stdint.h>
-#elif HAVE_INTTYPES_H
+#elif __has_include(<inttypes.h>)
     #include <inttypes.h>
 #endif
 #include <stdio.h>

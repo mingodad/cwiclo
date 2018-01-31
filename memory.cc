@@ -5,11 +5,11 @@
 
 #include "memory.h"
 #include <alloca.h>
-#if HAVE_EXECINFO_H
+#if __has_include(<execinfo.h>)
     #include <execinfo.h>
 #endif
 
-extern "C" void* _realloc (void* p, size_t n)
+extern "C" void* _realloc (void* p, size_t n) noexcept
 {
     p = realloc (p, n);
     if (!p)
@@ -17,7 +17,7 @@ extern "C" void* _realloc (void* p, size_t n)
     return p;
 }
 
-extern "C" void* _alloc (size_t n)
+extern "C" void* _alloc (size_t n) noexcept
 {
     auto p = _realloc (nullptr, n);
     #ifndef NDEBUG
@@ -26,7 +26,7 @@ extern "C" void* _alloc (size_t n)
     return p;
 }
 
-extern "C" void _free (void* p)
+extern "C" void _free (void* p) noexcept
     { free(p); }
 
 //----------------------------------------------------------------------
@@ -63,7 +63,7 @@ extern "C" void brotate (void* vf, void* vm, void* vl) noexcept
 
 extern "C" void print_backtrace (void) noexcept
 {
-#if HAVE_EXECINFO_H
+#if __has_include(<execinfo.h>)
     void* frames[32];
     auto nf = backtrace (ArrayBlock(frames));
     if (nf > 1) {
@@ -83,7 +83,7 @@ static inline bool _printable (char c)
 {
     return c >= 32 && c < 127;
 }
-extern "C" void hexdump (const void* vp, size_t n)
+extern "C" void hexdump (const void* vp, size_t n) noexcept
 {
     auto p = (const uint8_t*) vp;
     char line[65]; line[64] = 0;

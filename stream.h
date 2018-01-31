@@ -24,12 +24,12 @@ public:
     inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
     inline constexpr		istream (const cmemlink& m)			: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
-    inline constexpr auto	end (void) const	{ return _e; }
-    inline constexpr streamsize	remaining (void) const	{ return end()-_p; }
+    inline constexpr auto	end (void) const __restrict__			{ return _e; }
+    inline constexpr streamsize	remaining (void) const __restrict__		{ return end()-_p; }
     template <typename T>
-    inline auto			ptr (void) const	{ return reinterpret_cast<const T*>(_p); }
-    inline void			skip (streamsize sz)	{ seek (_p + sz); }
-    inline void			align (streamsize g)	{ seek (const_pointer (Align (uintptr_t(_p), g))); }
+    inline auto			ptr (void) const __restrict__		{ return reinterpret_cast<const T*>(_p); }
+    inline void			skip (streamsize sz) __restrict__	{ seek (_p + sz); }
+    inline void			align (streamsize g) __restrict__	{ seek (const_pointer (Align (uintptr_t(_p), g))); }
     inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    memcpy (p, _p, sz); skip(sz);
@@ -53,7 +53,7 @@ public:
     template <typename T>
     inline istream&		operator>> (T& v);
 protected:
-    inline void			seek (const_pointer p)	{ assert(p <= end()); _p = p; }
+    inline void			seek (const_pointer p) __restrict__	{ assert(p <= end()); _p = p; }
 private:
     const_pointer		_p;
     const const_pointer		_e;
@@ -72,11 +72,11 @@ public:
     inline constexpr		ostream (pointer p, streamsize sz)	: ostream(p,p+sz) {}
     inline constexpr		ostream (memlink& m)			: ostream(m.data(),m.size()) {}
     inline constexpr		ostream (const ostream& os) = default;
-    inline constexpr auto	end (void) const	{ return _e; }
-    inline constexpr streamsize	remaining (void) const	{ return end()-_p; }
+    inline constexpr auto	end (void) const __restrict__		{ return _e; }
+    inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
     template <typename T>
-    inline T*			ptr (void)		{ return reinterpret_cast<T*>(_p); }
-    inline void			skip (streamsize sz) {
+    inline T*			ptr (void) __restrict__	{ return reinterpret_cast<T*>(_p); }
+    inline void			skip (streamsize sz) __restrict__ {
 				    pointer __restrict__ p = _p;
 				    for (auto i = 0u; i < sz; ++i) {
 					assert (p+1 < end());
@@ -84,7 +84,7 @@ public:
 				    }
 				    _p = p;
 				}
-    inline void			align (streamsize g) {
+    inline void			align (streamsize g) __restrict__ {
 				    pointer __restrict__ p = _p;
 				    while (uintptr_t(p) % g) {
 					assert (p+1 < end());
@@ -106,7 +106,7 @@ public:
     template <typename T>
     inline ostream&		operator<< (const T& v);
 protected:
-    inline void			seek (pointer p)	{ assert(p < end()); _p = p; }
+    inline void			seek (pointer p) __restrict__	{ assert(p < end()); _p = p; }
 private:
     pointer	_p;
     const const_pointer		_e;
@@ -184,21 +184,9 @@ inline constexpr auto stream_align_of (const T&) { return stream_align<T>::value
 //}}}-------------------------------------------------------------------
 //{{{ Variadic serialization
 
-template <typename STM>
-inline void variadic_read (STM&) { }
-template <typename STM, typename T, typename... Args>
-inline void variadic_read (STM& is, T& v, Args&... args)
-    { is >> v; variadic_read (is, args...); }
-
-template <typename STM>
-inline void variadic_write (STM&) { }
-template <typename STM, typename T, typename... Args>
-inline void variadic_write (STM& os, const T& v, const Args&... args)
-    { os << v; variadic_write (os, args...); }
-
 template <typename... Args>
 inline auto variadic_stream_size (const Args&... args)
-    { sstream ss; variadic_write (ss, args...); return ss.size(); }
+    { sstream ss; (ss << ... << args); return ss.size(); }
 
 //}}}-------------------------------------------------------------------
 //{{{ stream operators

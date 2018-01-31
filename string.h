@@ -14,7 +14,7 @@ public:
     inline		string (void)					: memblock (pointer(nullptr), 0, true) {}
     inline		string (const_pointer s1, const_pointer s2)	: string() { assert (s1<=s2); assign (s1, s2-s1); }
     inline		string (const_pointer s, size_type len)		: string() { assign (s, len); }
-    inline constexpr	string (const_pointer s)			: memblock (s, strlen(s), true) {}
+    inline		string (const_pointer s)			: memblock (s, strlen(s), true) {}
     inline		string (string&& s)				: memblock(move(s)) {}
     inline explicit	string (const string& s)			: string() { assign (s); }
     inline auto		c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
