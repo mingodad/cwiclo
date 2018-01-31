@@ -6,6 +6,7 @@
 #pragma once
 #include "vector.h"
 #include "string.h"
+#include "metamac.h"
 
 //{{{ Types ------------------------------------------------------------
 namespace cwiclo {
