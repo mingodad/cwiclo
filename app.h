@@ -102,15 +102,20 @@ public:
 public:
     static auto&	Instance (void)			{ return *s_App; }
     inline void		ProcessArgs (argc_t, argv_t)	{ }
-    int			Run (void) noexcept;
+    int			Run (void) noexcept {
+			    while (!Flag (f_Quitting)) {
+				ProcessMessageQueue();
+				RunTimers();
+			    }
+			    return s_ExitCode;
+			}
     bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
     Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE)
 			    { return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo); }
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
     inline void		Quit (int ec = EXIT_SUCCESS)	{ s_ExitCode = ec; SetFlag (f_Quitting); }
-    void		DeleteUnusedMsgers (void) noexcept;
-    void		ForwardReceivedSignals (void) noexcept;
+    void		ProcessMessageQueue (void) noexcept;
     void		DeleteMsger (mrid_t mid) noexcept;
     void		RunTimers (void) noexcept;
     unsigned		GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept;
@@ -209,6 +214,8 @@ private:
 			    return nullptr;
 			}
     Msger*		CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
+    inline void		DeleteUnusedMsgers (void) noexcept;
+    inline void		ForwardReceivedSignals (void) noexcept;
     void		AddTimer (Timer* t)	{ _timers.push_back(t); }
     void		RemoveTimer (Timer* t)	{ foreach (i, _timers) if (*i == t) --(i=_timers.erase(i)); }
 private:

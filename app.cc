@@ -156,6 +156,55 @@ void App::DeleteUnusedMsgers (void) noexcept
 	    DeleteMsger (m->MsgerId());
 }
 
+//}}}-------------------------------------------------------------------
+//{{{ Message loop
+
+void App::ProcessMessageQueue (void) noexcept
+{
+    // Setup the queues
+    _inq.clear();		// input queue was processed on the last iteration
+    _inq.swap (move(_outq));	// output queue now becomes the input queue
+    if (_inq.empty()) {
+	DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
+    }
+
+    // Dispatch all messages in the input queue
+    for (auto& msg : _inq) {
+	// Dump the message if tracing
+	if (DEBUG_MSG_TRACE) {
+	    DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.Interface(), msg.Method(), msg.Size());
+	    auto msgbody = msg.Read();
+	    hexdump (msgbody.ptr<char>(), msgbody.remaining());
+	    DEBUG_PRINTF ("}""}}\n");
+	}
+
+	// Create the dispatch range. Broadcast messages go to all, the rest go to one.
+	auto mg = 0u, mgend = _msgers.size();
+	if (msg.Dest() != mrid_Broadcast) {
+	    if (!ValidMsgerId (msg.Dest())) {
+		DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.Dest());
+		continue;
+	    }
+	    mg = msg.Dest();
+	    mgend = mg+1;
+	}
+	for (; mg < mgend; ++mg) {
+	    auto& msger = _msgers[mg];
+	    if (!msger.created())
+		continue; // errors for msger creation failures were reported in CreateMsger; here just try to continue
+
+	    auto accepted = msger->Dispatch(msg);
+
+	    if (!accepted && msg.Dest() != mrid_Broadcast)
+		DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger. Did you forget to add the interface to the Dispatch override?\n");
+	}
+    }
+    // End-of-iteration housekeeping
+    DeleteUnusedMsgers();
+    ForwardReceivedSignals();
+}
+
 void App::ForwardReceivedSignals (void) noexcept
 {
     auto oldrs = s_ReceivedSignals;
@@ -167,60 +216,6 @@ void App::ForwardReceivedSignals (void) noexcept
 	    psig.Signal (i);
     // clear only the signal bits processed, in case new signals arrived during the loop
     s_ReceivedSignals ^= oldrs;
-}
-
-//}}}-------------------------------------------------------------------
-//{{{ Message loop
-
-int App::Run (void) noexcept
-{
-    while (!Flag (f_Quitting)) {	// quitting flag is set by calling App::Quit
-	// Setup the queues
-	_inq.clear();			// input queue was processed on the last iteration
-	_inq.swap (move(_outq));	// output queue now becomes the input queue
-	if (_inq.empty()) {
-	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
-	    break;			// running out of packets is usually not what you want, but not exactly an error
-	}
-
-	// Dispatch all messages in the input queue
-	for (auto& msg : _inq) {
-	    // Dump the message if tracing
-	    if (DEBUG_MSG_TRACE) {
-		DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.Interface(), msg.Method(), msg.Size());
-		auto msgbody = msg.Read();
-		hexdump (msgbody.ptr<char>(), msgbody.remaining());
-		DEBUG_PRINTF ("}""}}\n");
-	    }
-
-	    // Create the dispatch range. Broadcast messages go to all, the rest go to one.
-	    auto mg = 0u, mgend = _msgers.size();
-	    if (msg.Dest() != mrid_Broadcast) {
-		if (!ValidMsgerId (msg.Dest())) {
-		    DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.Dest());
-		    continue;
-		}
-		mg = msg.Dest();
-		mgend = mg+1;
-	    }
-	    for (; mg < mgend; ++mg) {
-		auto& msger = _msgers[mg];
-		if (!msger.created())
-		    continue; // errors for msger creation failures were reported in CreateMsger; here just try to continue
-
-		auto accepted = msger->Dispatch(msg);
-
-		if (!accepted && msg.Dest() != mrid_Broadcast)
-		    DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger. Did you forget to add the interface to the Dispatch override?\n");
-	    }
-	}
-	// End-of-iteration housekeeping
-	DeleteUnusedMsgers();
-	ForwardReceivedSignals();
-	// Wait for timers or fds to fire, blocking if there are no messages
-	RunTimers();
-    }
-    return s_ExitCode;
 }
 
 App::msgq_t::size_type App::HasMessagesFor (mrid_t mid) const noexcept
