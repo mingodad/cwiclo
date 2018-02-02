@@ -42,7 +42,7 @@ public:
 
     template <typename O>
     static bool Dispatch (O* o, const Msg& msg) noexcept {
-	if (msg.Interface() != Interface() || msg.Method() != M_Watch())
+	if (msg.Method() != M_Watch())
 	    return false;
 	auto is = msg.Read();
 	auto cmd = is.readv<ETimerWatchCmd>();
@@ -64,9 +64,27 @@ public:
 
     template <typename O>
     static bool Dispatch (O* o, const Msg& msg) noexcept {
-	if (msg.Interface() != Interface() || msg.Method() != M_Timer())
+	if (msg.Method() != M_Timer())
 	    return false;
 	o->TimerR_Timer (msg.Read().readv<int>());
+	return true;
+    }
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ Signal interface
+
+class PSignal : public Proxy {
+    DECLARE_INTERFACE (Signal, (Signal,"i"));
+public:
+    explicit	PSignal (mrid_t caller)	: Proxy (caller, mrid_Broadcast) {}
+    void	Signal (int sig)	{ Send (M_Signal(), sig); }
+
+    template <typename O>
+    static bool Dispatch (O* o, const Msg& msg) noexcept {
+	if (msg.Method() != M_Signal())
+	    return false;
+	o->Signal_Signal (msg.Read().readv<int>());
 	return true;
     }
 };
@@ -92,6 +110,7 @@ public:
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
     inline void		Quit (int ec = EXIT_SUCCESS)	{ s_ExitCode = ec; SetFlag (f_Quitting); }
     void		DeleteUnusedMsgers (void) noexcept;
+    void		ForwardReceivedSignals (void) noexcept;
     void		DeleteMsger (mrid_t mid) noexcept;
     void		RunTimers (void) noexcept;
     unsigned		GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept;
@@ -200,9 +219,7 @@ private:
     static App*		s_App;
     static const MsgerImplements s_MsgerImpls[];
     static int		s_ExitCode;
-    static int		s_LastSignal;
-    static int		s_LastChildStatus;
-    static pid_t	s_LastChild;
+    static uint32_t	s_ReceivedSignals;
 };
 
 //}}}-------------------------------------------------------------------

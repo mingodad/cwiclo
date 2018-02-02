@@ -7,11 +7,12 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-//{{{ Timer interface --------------------------------------------------
+//{{{ Timer and Signal interfaces --------------------------------------
 namespace cwiclo {
 
 DEFINE_INTERFACE (Timer)
 DEFINE_INTERFACE (TimerR)
+DEFINE_INTERFACE (Signal)
 
 auto PTimer::Now (void) noexcept -> mstime_t
 {
@@ -25,10 +26,8 @@ auto PTimer::Now (void) noexcept -> mstime_t
 //{{{ App
 
 App*	App::s_App		= nullptr;	// static
-int	App::s_LastSignal	= 0;		// static
-int	App::s_LastChild	= 0;		// static
-pid_t	App::s_LastChildStatus	= EXIT_SUCCESS;	// static
 int	App::s_ExitCode		= EXIT_SUCCESS;	// static
+uint32_t App::s_ReceivedSignals	= 0;		// static
 
 App::App (void)
 : Msger (mrid_App)
@@ -86,11 +85,8 @@ void App::FatalSignalHandler (int sig) // static
 
 void App::MsgSignalHandler (int sig) // static
 {
-    s_LastSignal = sig;
-    if (sig == SIGCHLD)
-	s_LastChild = waitpid (-1, &s_LastChildStatus, WNOHANG);
+    s_ReceivedSignals |= S(sig);
 }
-#undef S
 
 //}}}-------------------------------------------------------------------
 //{{{ Msger lifecycle
@@ -160,6 +156,19 @@ void App::DeleteUnusedMsgers (void) noexcept
 	    DeleteMsger (m->MsgerId());
 }
 
+void App::ForwardReceivedSignals (void) noexcept
+{
+    auto oldrs = s_ReceivedSignals;
+    if (!oldrs)
+	return;
+    PSignal psig (mrid_App);
+    for (auto i = 0u; i < sizeof(s_ReceivedSignals)*8; ++i)
+	if (oldrs & S(i))
+	    psig.Signal (i);
+    // clear only the signal bits processed, in case new signals arrived during the loop
+    s_ReceivedSignals ^= oldrs;
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ Message loop
 
@@ -207,6 +216,7 @@ int App::Run (void) noexcept
 	}
 	// End-of-iteration housekeeping
 	DeleteUnusedMsgers();
+	ForwardReceivedSignals();
 	// Wait for timers or fds to fire, blocking if there are no messages
 	RunTimers();
     }
