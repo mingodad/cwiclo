@@ -5,5 +5,5 @@
 
 #include "ping.h"
 
-DEFINE_INTERFACE (Ping, "Ping\0u");
-DEFINE_INTERFACE (PingR, "Ping\0u");
+DEFINE_INTERFACE (Ping);
+DEFINE_INTERFACE (PingR);

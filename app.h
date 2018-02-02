@@ -4,38 +4,45 @@
 // This file is free software, distributed under the MIT License.
 
 #pragma once
-#include "string.h"
-#include "set.h"
 #include "msg.h"
+#include "set.h"
 #include <sys/poll.h>
 #include <time.h>
 
 //{{{ Timer interface --------------------------------------------------
 namespace cwiclo {
 
-enum ETimerWatchCmd : uint32_t {
-    WATCH_STOP              = 0,
-    WATCH_READ              = POLLIN,
-    WATCH_WRITE             = POLLOUT,
-    WATCH_RDWR              = WATCH_READ| WATCH_WRITE,
-    WATCH_TIMER             = POLLMSG,
-    WATCH_READ_TIMER        = WATCH_READ| WATCH_TIMER,
-    WATCH_WRITE_TIMER       = WATCH_WRITE| WATCH_TIMER,
-    WATCH_RDWR_TIMER        = WATCH_RDWR| WATCH_TIMER
-};
-enum {
-    TIMER_MAX = INT64_MAX,
-    TIMER_NONE = UINT64_MAX
-};
-
-//----------------------------------------------------------------------
-
-struct ITimer : public Interface {
-    enum : imethod_t { imethod_Watch };
+class PTimer : public Proxy {
+    DECLARE_INTERFACE (Timer, (Watch,"uix"))
+public:
+    enum ETimerWatchCmd : uint32_t {
+	WATCH_STOP              = 0,
+	WATCH_READ              = POLLIN,
+	WATCH_WRITE             = POLLOUT,
+	WATCH_RDWR              = WATCH_READ| WATCH_WRITE,
+	WATCH_TIMER             = POLLMSG,
+	WATCH_READ_TIMER        = WATCH_READ| WATCH_TIMER,
+	WATCH_WRITE_TIMER       = WATCH_WRITE| WATCH_TIMER,
+	WATCH_RDWR_TIMER        = WATCH_RDWR| WATCH_TIMER
+    };
     using mstime_t = uint64_t;
+    enum : mstime_t {
+	TIMER_MAX = INT64_MAX,
+	TIMER_NONE = UINT64_MAX
+    };
+public:
+    explicit	PTimer (mrid_t caller) : Proxy (caller) {}
+    void	Watch (ETimerWatchCmd cmd, int fd, mstime_t timeoutms)
+		    { Send (M_Watch(), cmd, fd, timeoutms); }
+    void	Stop (void)					{ Watch (WATCH_STOP, -1, TIMER_NONE); }
+    void	Timer (mstime_t timeoutms)			{ Watch (WATCH_TIMER, -1, timeoutms); }
+    void	WaitRead (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_READ, fd, t); }
+    void	WaitWrite (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_WRITE, fd, t); }
+    void	WaitRdWr (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_RDWR, fd, t); }
+
     template <typename O>
-    bool Dispatch (O* o, const Msg& msg) const {
-	if (msg.InterfaceName() != this->name || msg.IMethod() != imethod_Watch)
+    static bool Dispatch (O* o, const Msg& msg) noexcept {
+	if (msg.Interface() != Interface() || msg.Method() != M_Watch())
 	    return false;
 	auto is = msg.Read();
 	auto cmd = is.readv<ETimerWatchCmd>();
@@ -46,45 +53,22 @@ struct ITimer : public Interface {
     }
     static mstime_t Now (void) noexcept;
 };
-extern const ITimer i_Timer;
-
-//----------------------------------------------------------------------
-
-class PTimer : public Proxy {
-public:
-    using mstime_t = ITimer::mstime_t;
-public:
-    explicit	PTimer (mrid_t caller) : Proxy (caller) {}
-    void	Watch (ETimerWatchCmd cmd, int fd, mstime_t timeoutms)
-		    { Send (&i_Timer, ITimer::imethod_Watch, cmd, fd, timeoutms); }
-    void	Stop (void)					{ Watch (WATCH_STOP, -1, TIMER_NONE); }
-    void	Timer (mstime_t timeoutms)			{ Watch (WATCH_TIMER, -1, timeoutms); }
-    void	WaitRead (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_READ, fd, t); }
-    void	WaitWrite (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_WRITE, fd, t); }
-    void	WaitRdWr (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_RDWR, fd, t); }
-};
-
-//----------------------------------------------------------------------
-
-struct ITimerR : public Interface {
-    enum : imethod_t { imethod_Timer };
-    using mstime_t = uint64_t;
-    template <typename O>
-    bool Dispatch (O* o, const Msg& msg) const {
-	if (msg.InterfaceName() != this->name || msg.IMethod() != imethod_Timer)
-	    return false;
-	o->TimerR_Timer (msg.Read().readv<int>());
-	return true;
-    }
-};
-extern const ITimerR i_TimerR;
 
 //----------------------------------------------------------------------
 
 class PTimerR : public ProxyR {
+    DECLARE_INTERFACE (TimerR, (Timer,"i"));
 public:
-    explicit	PTimerR (const Msg::Link& l) : ProxyR (l) {}
-    void	Timer (int fd) { Send (&i_TimerR, ITimerR::imethod_Timer, fd); }
+    explicit	PTimerR (const Msg::Link& l)	: ProxyR (l) {}
+    void	Timer (int fd)			{ Send (M_Timer(), fd); }
+
+    template <typename O>
+    static bool Dispatch (O* o, const Msg& msg) noexcept {
+	if (msg.Interface() != Interface() || msg.Method() != M_Timer())
+	    return false;
+	o->TimerR_Timer (msg.Read().readv<int>());
+	return true;
+    }
 };
 
 //}}}-------------------------------------------------------------------
@@ -94,17 +78,17 @@ class App : public Msger {
 public:
     using argc_t	= int;
     using argv_t	= char* const*;
-    using mstime_t	= ITimer::mstime_t;
+    using mstime_t	= PTimer::mstime_t;
     using msgq_t	= vector<Msg>;
     enum { f_Quitting = Msger::f_Last, f_DebugMsgTrace, f_Last };
 public:
     static auto&	Instance (void)			{ return *s_App; }
     inline void		ProcessArgs (argc_t, argv_t)	{ }
     int			Run (void) noexcept;
-    bool		ValidMsgerId (mrid_t id) const	{ return id >= mrid_First && id <= _msgers.size(); }
+    bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
-    Msg&		CreateMsg (Msg::Link& l, iid_t iid, imethod_t imethod, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE)
-			    { return _outq.emplace_back (CreateLink(l,iid),iid,imethod,size,extid,fdo); }
+    Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE)
+			    { return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo); }
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
     inline void		Quit (int ec = EXIT_SUCCESS)	{ s_ExitCode = ec; SetFlag (f_Quitting); }
     void		DeleteUnusedMsgers (void) noexcept;
@@ -179,28 +163,26 @@ public:
     public:
 			Timer (const Msg::Link& l) : Msger(l),_nextfire(),_reply(l),_cmd(),_fd(-1) { App::Instance().AddTimer (this); }
 			~Timer (void) noexcept	{ App::Instance().RemoveTimer (this); }
-	virtual bool	Dispatch (const Msg& msg) noexcept { return i_Timer.Dispatch(this,msg) || Msger::Dispatch(msg); }
-	void		Timer_Watch (ETimerWatchCmd cmd, int fd, mstime_t timeoutms)
-			    { _cmd = cmd; _fd = fd; _nextfire = timeoutms + (timeoutms <= TIMER_MAX ? ITimer::Now() : 0); }
-	void		Stop (void)		{ SetFlag (f_Unused); _cmd = WATCH_STOP; _fd = -1; _nextfire = TIMER_NONE; }
+	virtual bool	Dispatch (const Msg& msg) noexcept { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
+	void		Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms)
+			    { _cmd = cmd; _fd = fd; _nextfire = timeoutms + (timeoutms <= PTimer::TIMER_MAX ? PTimer::Now() : 0); }
+	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WATCH_STOP; _fd = -1; _nextfire = PTimer::TIMER_NONE; }
 	void		Fire (void)		{ _reply.Timer (_fd); Stop(); }
 	auto		Fd (void) const		{ return _fd; }
 	auto		Cmd (void) const	{ return _cmd; }
 	auto		NextFire (void) const	{ return _nextfire; }
 	auto		PollMask (void) const	{ return _cmd; }
     public:
-	ITimer::mstime_t	_nextfire;
-	PTimerR		_reply;
-	ETimerWatchCmd	_cmd;
-	int		_fd;
+	PTimer::mstime_t	_nextfire;
+	PTimerR			_reply;
+	PTimer::ETimerWatchCmd	_cmd;
+	int			_fd;
     };
     //}}}2--------------------------------------------------------------
 private:
     inline void		InstallSignalHandlers (void);
     mrid_t		AllocateMrid (void) noexcept;
-    auto		MridFromIndex (mrid_t idx) const	{ return idx + mrid_First; }
-    auto		IndexFromMrid (mrid_t id) const		{ return id - mrid_First; }
-    auto&		MsgerpById (mrid_t id)	{ return _msgers[IndexFromMrid(id)]; }
+    auto&		MsgerpById (mrid_t id)	{ return _msgers[id]; }
     pfn_msger_factory	MsgerFactoryFor (iid_t id) {
 			    for (auto mii = s_MsgerImpls; mii->iface; ++mii)
 				if (mii->iface == id)
@@ -238,7 +220,7 @@ int main (A::argc_t argc, A::argv_t argv) \
     { return Tmain<A> (argc, argv); }
 
 #define BEGIN_MSGERS	const App::MsgerImplements App::s_MsgerImpls[] = {
-#define REGISTER_MSGER(iface,mgtype)	{ &iface, &MsgerFactory<mgtype> },
+#define REGISTER_MSGER(iface,mgtype)	{ P##iface::Interface(), &MsgerFactory<mgtype> },
 #define END_MSGERS	{nullptr,nullptr}};
 
 #define BEGIN_CWICLO_APP(A)	\

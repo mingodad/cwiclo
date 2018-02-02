@@ -10,10 +10,10 @@
 //{{{ Timer interface --------------------------------------------------
 namespace cwiclo {
 
-DEFINE_INTERFACE (Timer, "Watch\0uix");
-DEFINE_INTERFACE (TimerR, "Timer\0i");
+DEFINE_INTERFACE (Timer)
+DEFINE_INTERFACE (TimerR)
 
-auto ITimer::Now (void) noexcept -> mstime_t
+auto PTimer::Now (void) noexcept -> mstime_t
 {
     struct timespec t;
     if (0 > clock_gettime (CLOCK_REALTIME, &t))
@@ -100,9 +100,9 @@ mrid_t App::AllocateMrid (void) noexcept
     mrid_t id = 0;
     for (; id < _msgers.size(); ++id)
 	if (_msgers[id] == nullptr)
-	    return MridFromIndex(id);
+	    return id;
     _msgers.emplace_back (nullptr);
-    return MridFromIndex(id);
+    return id;
 }
 
 Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
@@ -112,12 +112,12 @@ Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
     if (fac)
 	r = (*fac)(l);
     #ifndef NDEBUG	// Log failure to create in debug mode
-	if (!r && (!iid || !iid->name || !iid->name[0] || iid->name[strlen(iid->name)-1] != 'R')) { // reply messages do not recreate dead Msgers
+	if (!r && (!iid || !iid[0] || iid[iid[-1]-1] != 'R')) { // reply messages do not recreate dead Msgers
 	    if (!fac) {
-		DEBUG_PRINTF ("Error: no factory registered for interface %s\n", iid ? iid->name : "(iid_null)");
+		DEBUG_PRINTF ("Error: no factory registered for interface %s\n", iid ? iid : "(iid_null)");
 		assert (!"Unable to find factory for the given interface. You must register a Msger for every interface you use using REGISTER_MSGER in the BEGIN_MSGER/END_MSGER block.");
 	    } else {
-		DEBUG_PRINTF ("Error: failed to create Msger for interface %s\n", iid ? iid->name : "(iid_null)");
+		DEBUG_PRINTF ("Error: failed to create Msger for interface %s\n", iid ? iid : "(iid_null)");
 		assert (!"Failed to create Msger for the given destination. Msger constructors are not allowed to fail or throw.");
 	    }
 	}
@@ -141,7 +141,7 @@ Msg::Link& App::CreateLink (Msg::Link& l, iid_t iid) noexcept
 
 void App::DeleteMsger (mrid_t mid) noexcept
 {
-    auto& m = _msgers[IndexFromMrid(mid)];
+    auto& m = _msgers[mid];
     if (!m.created())
 	return;
     // Notify connected Msgers of this one's destruction
@@ -178,7 +178,7 @@ int App::Run (void) noexcept
 	for (auto& msg : _inq) {
 	    // Dump the message if tracing
 	    if (DEBUG_MSG_TRACE) {
-		DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.InterfaceName(), msg.Method(), msg.Size());
+		DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.Interface(), msg.Method(), msg.Size());
 		auto msgbody = msg.Read();
 		hexdump (msgbody.ptr<char>(), msgbody.remaining());
 		DEBUG_PRINTF ("}""}}\n");
@@ -191,7 +191,7 @@ int App::Run (void) noexcept
 		    DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.Dest());
 		    continue;
 		}
-		mg = IndexFromMrid (msg.Dest());
+		mg = msg.Dest();
 		mgend = mg+1;
 	    }
 	    for (; mg < mgend; ++mg) {
@@ -263,10 +263,10 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
     // Note that there may be a timeout without any fds
     //
     auto npfd = 0u;
-    ITimer::mstime_t nearest = TIMER_MAX;
+    PTimer::mstime_t nearest = PTimer::TIMER_MAX;
     for (auto t : _timers) {
 	nearest = min (nearest, t->NextFire());
-	if (t->Fd() >= 0 && t->Cmd() != WATCH_STOP) {
+	if (t->Fd() >= 0 && t->Cmd() != PTimer::WATCH_STOP) {
 	    if (npfd >= pfdsz)
 		break;
 	    pfd[npfd].fd = t->Fd();
@@ -274,10 +274,10 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
 	    pfd[npfd++].revents = 0;
 	}
     }
-    if (nearest == TIMER_MAX)	// Wait indefinitely
+    if (nearest == PTimer::TIMER_MAX)	// Wait indefinitely
 	timeout = -!!npfd;	// If no fds, then don't wait at all
     else // get current time and compute timeout to nearest
-	timeout = max (nearest - ITimer::Now(), 0);
+	timeout = max (nearest - PTimer::Now(), 0);
     return npfd;
 }
 
@@ -285,11 +285,11 @@ void App::CheckPollTimers (const pollfd* fds) noexcept
 {
     // Poll errors are checked for each fd with POLLERR. Other errors are ignored.
     // poll will exit when there are fds available or when the timer expires
-    auto now = ITimer::Now();
+    auto now = PTimer::Now();
     const auto* cfd = fds;
     for (auto t : _timers) {
 	bool timerExpired = t->NextFire() <= now,
-	    hasFd = (t->Fd() >= 0 && t->Cmd() != WATCH_STOP),
+	    hasFd = (t->Fd() >= 0 && t->Cmd() != PTimer::WATCH_STOP),
 	    fdFired = hasFd && (cfd->revents & (POLLERR| t->Cmd()));
 
 	// Log the firing if tracing

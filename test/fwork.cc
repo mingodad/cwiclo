@@ -9,7 +9,7 @@ class TestApp : public App {
 public:
     static auto&	Instance (void) { static TestApp s_App; return s_App; }
     virtual bool	Dispatch (const Msg& msg) noexcept override
-			    { return i_PingR.Dispatch(this,msg) || App::Dispatch(msg); }
+			    { return PPingR::Dispatch(this,msg) || App::Dispatch(msg); }
     void		PingR_Ping (uint32_t v) {
 			    LOG ("Ping %u reply received in app\n", v);
 			    if (++v < 5)
@@ -26,5 +26,5 @@ private:
 };
 
 BEGIN_CWICLO_APP (TestApp)
-    REGISTER_MSGER (i_Ping, PingMsger)
+    REGISTER_MSGER (Ping, PingMsger)
 END_CWICLO_APP
