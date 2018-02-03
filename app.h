@@ -122,7 +122,8 @@ public:
     void		Quit (void)			{ SetFlag (f_Quitting); }
     void		Quit (int ec)			{ s_ExitCode = ec; Quit(); }
     auto&		Errors (void) const		{ return _errors; }
-    void		ProcessMessageQueue (void) noexcept;
+    void		FreeMrid (mrid_t id) noexcept;
+    void		MessageLoopOnce (void) noexcept;
     void		DeleteMsger (mrid_t mid) noexcept;
     unsigned		GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept;
     void		CheckPollTimers (const pollfd* fds) noexcept;
@@ -227,6 +228,7 @@ private:
 			}
     inline void		SwapQueues (void) noexcept;
     Msger*		CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
+    inline void		ProcessInputQueue (void) noexcept;
     inline void		DeleteUnusedMsgers (void) noexcept;
     inline void		ForwardReceivedSignals (void) noexcept;
     void		AddTimer (Timer* t)	{ _timers.push_back(t); }
@@ -250,7 +252,7 @@ private:
 int App::Run (void) noexcept
 {
     while (!Flag (f_Quitting)) {
-	ProcessMessageQueue();
+	MessageLoopOnce();
 	RunTimers();
     }
     return s_ExitCode;

@@ -122,8 +122,16 @@ mrid_t App::AllocateMrid (void) noexcept
     for (; id < _msgers.size(); ++id)
 	if (_msgers[id] == nullptr)
 	    return id;
+    assert (id <= mrid_Last && "mrid_t address space exhausted; please ensure somebody is freeing them");
     _msgers.emplace_back (nullptr);
     return id;
+}
+
+void App::FreeMrid (mrid_t id) noexcept
+{
+    assert (ValidMsgerId(id));
+    DeleteMsger (id);
+    MsgerpById(id).reset (nullptr);
 }
 
 Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
@@ -184,11 +192,30 @@ void App::DeleteUnusedMsgers (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Message loop
 
-void App::ProcessMessageQueue (void) noexcept
+void App::MessageLoopOnce (void) noexcept
 {
     SwapQueues();
+    ProcessInputQueue();
+    // End-of-iteration housekeeping
+    DeleteUnusedMsgers();
+    ForwardReceivedSignals();
+}
 
-    // Dispatch all messages in the input queue
+void App::SwapQueues (void) noexcept
+{
+    _inq.clear();		// input queue was processed on the last iteration
+    {
+	atomic_scope_lock qlock (s_outqLock);
+	_inq.swap (move(_outq));	// output queue now becomes the input queue
+    }
+    if (_inq.empty()) {
+	DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
+    }
+}
+
+void App::ProcessInputQueue (void) noexcept
+{
     for (auto& msg : _inq) {
 	// Dump the message if tracing
 	if (DEBUG_MSG_TRACE) {
@@ -220,24 +247,8 @@ void App::ProcessMessageQueue (void) noexcept
 
 	    // Check for errors generated during this dispatch
 	    if (!Errors().empty() && !ForwardError (mg, mg))
-		Quit (EXIT_FAILURE);
+		return Quit (EXIT_FAILURE);
 	}
-    }
-    // End-of-iteration housekeeping
-    DeleteUnusedMsgers();
-    ForwardReceivedSignals();
-}
-
-void App::SwapQueues (void) noexcept
-{
-    _inq.clear();		// input queue was processed on the last iteration
-    {
-	atomic_scope_lock qlock (s_outqLock);
-	_inq.swap (move(_outq));	// output queue now becomes the input queue
-    }
-    if (_inq.empty()) {
-	DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
-	SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
     }
 }
 
