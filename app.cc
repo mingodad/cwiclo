@@ -102,8 +102,10 @@ bool App::ForwardError (mrid_t oid, mrid_t eoid) noexcept
     auto& m = MsgerpById (oid);
     if (!m.created())
 	return false;
-    if (m->OnError (eoid, Errors()))
+    if (m->OnError (eoid, Errors())) {
+	_errors.clear();	// error handled; clear message
 	return true;
+    }
     auto nextoid = m->CreatorId();
     if (nextoid == oid || !ValidMsgerId(nextoid))
 	return false;
