@@ -61,15 +61,17 @@ uninstall-incs:
 endif
 ifdef LIBDIR
 LIBAI		:= ${LIBDIR}/$(notdir ${LIBA})
+LIBAI_R		:= ${LIBDIR}/$(notdir ${LIBA_R})
+LIBAI_D		:= ${LIBDIR}/$(notdir ${LIBA_D})
 install:        ${LIBAI}
 ${LIBAI}:       ${LIBA}
 	@echo "Installing $@ ..."
 	@${INSTALLLIB} $< $@
 uninstall:	uninstall-lib
 uninstall-lib:
-	@if [ -f ${LIBAI} ]; then\
+	@if [ -f ${LIBAI_R} -o -f ${LIBAI_D} ]; then\
 	    echo "Removing ${LIBAI} ...";\
-	    rm -f ${LIBAI};\
+	    rm -f ${LIBAI_R} ${LIBAI_D};\
 	fi
 endif
 ifdef DOCDIR
