@@ -256,38 +256,6 @@ App::msgq_t::size_type App::HasMessagesFor (mrid_t mid) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Timers
 
-void App::RunTimers (void) noexcept
-{
-    if (_timers.empty() || Flag(f_Quitting))
-	return;
-
-    // Populate the fd list and find the nearest timer
-    pollfd fds [_timers.size()];
-    int timeout;
-    auto nfds = GetPollTimerList (fds, _timers.size(), timeout);
-    if (!nfds && !timeout)
-	return;
-    if (!_outq.empty())	// do not wait if there are messages to process
-	timeout = 0;
-
-    // And wait
-    if (DEBUG_MSG_TRACE) {
-	if (timeout > 0)
-	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
-	else if (timeout < 0)
-	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
-	else if (!timeout)
-	    DEBUG_PRINTF ("[I] Checking ");
-	DEBUG_PRINTF ("%u file descriptors from %u timers", nfds, _timers.size());
-    }
-
-    // And poll
-    poll (fds, nfds, timeout);
-
-    // Then, check timers for expiration
-    CheckPollTimers (fds);
-}
-
 unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept
 {
     // Put all valid fds into the pfd list and calculate the nearest timeout
@@ -305,8 +273,10 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
 	    pfd[npfd++].revents = 0;
 	}
     }
-    if (nearest == PTimer::TIMER_MAX)	// Wait indefinitely
-	timeout = -!!npfd;	// If no fds, then don't wait at all
+    if (_outq.empty())
+	timeout = 0;	// do not wait if there are messages to process
+    else if (nearest == PTimer::TIMER_MAX)	// wait indefinitely
+	timeout = -!!npfd;	// if no fds, then don't wait at all
     else // get current time and compute timeout to nearest
 	timeout = max (nearest - PTimer::Now(), 0);
     return npfd;

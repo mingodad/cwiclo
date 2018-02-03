@@ -9,8 +9,19 @@
 #include <sys/poll.h>
 #include <time.h>
 
-//{{{ Timer interface --------------------------------------------------
+//{{{ Debugging macros -------------------------------------------------
 namespace cwiclo {
+
+#ifndef NDEBUG
+    #define DEBUG_MSG_TRACE	App::Instance().Flag(App::f_DebugMsgTrace)
+    #define DEBUG_PRINTF(...)	do { if (DEBUG_MSG_TRACE) fprintf (stderr, __VA_ARGS__); } while (false)
+#else
+    #define DEBUG_MSG_TRACE	false
+    #define DEBUG_PRINTF(...)	do {} while (false)
+#endif
+
+//}}}-------------------------------------------------------------------
+//{{{ Timer interface
 
 class PTimer : public Proxy {
     DECLARE_INTERFACE (Timer, (Watch,"uix"))
@@ -102,24 +113,18 @@ public:
 public:
     static auto&	Instance (void)			{ return *s_App; }
     void		ProcessArgs (argc_t, argv_t)	{ }
-    int			Run (void) noexcept {
-			    while (!Flag (f_Quitting)) {
-				ProcessMessageQueue();
-				RunTimers();
-			    }
-			    return s_ExitCode;
-			}
+    inline int		Run (void) noexcept;
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
     Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE)
 			    { return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo); }
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
+    auto		HasTimers (void) const		{ return _timers.size(); }
     bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
     void		Quit (void)			{ SetFlag (f_Quitting); }
     void		Quit (int ec)			{ s_ExitCode = ec; Quit(); }
     auto&		Errors (void) const		{ return _errors; }
     void		ProcessMessageQueue (void) noexcept;
     void		DeleteMsger (mrid_t mid) noexcept;
-    void		RunTimers (void) noexcept;
     unsigned		GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept;
     void		CheckPollTimers (const pollfd* fds) noexcept;
     bool		ForwardError (mrid_t oid, mrid_t eoid) noexcept;
@@ -226,6 +231,7 @@ private:
     inline void		ForwardReceivedSignals (void) noexcept;
     void		AddTimer (Timer* t)	{ _timers.push_back(t); }
     void		RemoveTimer (Timer* t)	{ foreach (i, _timers) if (*i == t) --(i=_timers.erase(i)); }
+    inline void		RunTimers (void) noexcept;
 private:
     msgq_t		_outq;
     msgq_t		_inq;
@@ -237,6 +243,48 @@ private:
     static int		s_ExitCode;
     static uint32_t	s_ReceivedSignals;
 };
+
+//----------------------------------------------------------------------
+
+int App::Run (void) noexcept
+{
+    while (!Flag (f_Quitting)) {
+	ProcessMessageQueue();
+	RunTimers();
+    }
+    return s_ExitCode;
+}
+
+void App::RunTimers (void) noexcept
+{
+    auto ntimers = HasTimers();
+    if (!ntimers || Flag(f_Quitting))
+	return;
+
+    // Populate the fd list and find the nearest timer
+    pollfd fds [ntimers];
+    int timeout;
+    auto nfds = GetPollTimerList (fds, ntimers, timeout);
+    if (!nfds && !timeout)
+	return;
+
+    // And wait
+    if (DEBUG_MSG_TRACE) {
+	if (timeout > 0)
+	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
+	else if (timeout < 0)
+	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
+	else if (!timeout)
+	    DEBUG_PRINTF ("[I] Checking ");
+	DEBUG_PRINTF ("%u file descriptors from %u timers", nfds, ntimers);
+    }
+
+    // And poll
+    poll (fds, nfds, timeout);
+
+    // Then, check timers for expiration
+    CheckPollTimers (fds);
+}
 
 //}}}-------------------------------------------------------------------
 //{{{ main template
@@ -260,17 +308,6 @@ int main (A::argc_t argc, A::argv_t argv) \
     CwicloMain(A)		\
     BEGIN_MSGERS
 #define END_CWICLO_APP		END_MSGERS
-
-//}}}-------------------------------------------------------------------
-//{{{ Debugging macros
-
-#ifndef NDEBUG
-    #define DEBUG_MSG_TRACE	App::Instance().Flag(App::f_DebugMsgTrace)
-    #define DEBUG_PRINTF(...)	do { if (DEBUG_MSG_TRACE) fprintf (stderr, __VA_ARGS__); } while (false)
-#else
-    #define DEBUG_MSG_TRACE	false
-    #define DEBUG_PRINTF(...)	do {} while (false)
-#endif
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------
