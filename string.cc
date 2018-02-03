@@ -50,7 +50,7 @@ int string::appendf (const char* fmt, ...) noexcept
 
 int string::assignv (const char* fmt, va_list args) noexcept
 {
-    clear();
+    resize(0);
     return insertv (end(), fmt, args);
 }
 

@@ -69,7 +69,8 @@ public:
     inline bool		operator>= (const_pointer s) const		{ return 0 <= compare (s); }
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<l); return erase (f, l-f); }
-    inline void		pop_back (void)					{ resize (size()-1); }
+    inline void		pop_back (void)					{ assert (end() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
+    inline void		clear (void)					{ assert (end() && "modifying a const linked string"); memlink::resize (0); *end() = 0; }
     void		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen) noexcept;
     inline void		replace (const_iterator f, const_iterator l, const_pointer s)			{ replace (f, l, s, strlen(s)); }
     inline void		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ replace (f, l, i1, i2-i1); }
