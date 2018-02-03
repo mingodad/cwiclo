@@ -101,7 +101,7 @@ public:
     enum { f_Quitting = Msger::f_Last, f_DebugMsgTrace, f_Last };
 public:
     static auto&	Instance (void)			{ return *s_App; }
-    inline void		ProcessArgs (argc_t, argv_t)	{ }
+    void		ProcessArgs (argc_t, argv_t)	{ }
     int			Run (void) noexcept {
 			    while (!Flag (f_Quitting)) {
 				ProcessMessageQueue();
@@ -109,17 +109,25 @@ public:
 			    }
 			    return s_ExitCode;
 			}
-    bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
     Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE)
 			    { return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo); }
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
-    inline void		Quit (int ec = EXIT_SUCCESS)	{ s_ExitCode = ec; SetFlag (f_Quitting); }
+    bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
+    void		Quit (void)			{ SetFlag (f_Quitting); }
+    void		Quit (int ec)			{ s_ExitCode = ec; Quit(); }
+    auto&		Errors (void) const		{ return _errors; }
     void		ProcessMessageQueue (void) noexcept;
     void		DeleteMsger (mrid_t mid) noexcept;
     void		RunTimers (void) noexcept;
     unsigned		GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept;
     void		CheckPollTimers (const pollfd* fds) noexcept;
+    bool		ForwardError (mrid_t oid, mrid_t eoid) noexcept;
+#ifdef NDEBUG
+    void		Errorv (const char* fmt, va_list args) noexcept	{ _errors.appendv (fmt, args); }
+#else
+    void		Errorv (const char* fmt, va_list args) noexcept;
+#endif
 protected:
 			App (void);
     virtual		~App (void) noexcept;
@@ -223,6 +231,7 @@ private:
     msgq_t		_inq;
     vector<Msgerp>	_msgers;
     vector<Timer*>	_timers;
+    string		_errors;
     static App*		s_App;
     static const MsgerImplements s_MsgerImpls[];
     static int		s_ExitCode;
@@ -257,7 +266,7 @@ int main (A::argc_t argc, A::argv_t argv) \
 
 #ifndef NDEBUG
     #define DEBUG_MSG_TRACE	App::Instance().Flag(App::f_DebugMsgTrace)
-    #define DEBUG_PRINTF(...)	do { if (DEBUG_MSG_TRACE) printf (__VA_ARGS__); } while (false)
+    #define DEBUG_PRINTF(...)	do { if (DEBUG_MSG_TRACE) fprintf (stderr, __VA_ARGS__); } while (false)
 #else
     #define DEBUG_MSG_TRACE	false
     #define DEBUG_PRINTF(...)	do {} while (false)

@@ -179,6 +179,7 @@ public:
     auto		CreatorId (void) const		{ return CreatorLink().src; }
     auto		MsgerId (void) const		{ return CreatorLink().dest; }
     auto		Flag (unsigned f) const		{ return GetBit(_flags,f); }
+    static void		Error (const char* fmt, ...) noexcept PRINTFARGS(1,2);
     virtual bool	Dispatch (const Msg&) noexcept	{ return false; }
     virtual bool	OnError (mrid_t, const string&) noexcept
 			    { SetFlag (f_Unused); return false; }

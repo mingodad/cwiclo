@@ -34,6 +34,7 @@ App::App (void)
 ,_outq()
 ,_inq()
 ,_msgers()
+,_errors()
 {
     assert (!s_App && "there must be only one App object");
     s_App = this;
@@ -43,10 +44,12 @@ App::App (void)
 
 App::~App (void) noexcept
 {
+    if (!_errors.empty())
+	fprintf (stderr, "Error: %s\n", _errors.c_str());
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ Signal handling
+//{{{ Signal and error handling
 
 #define S(s) (1<<(s))
 enum {
@@ -70,11 +73,7 @@ void App::FatalSignalHandler (int sig) // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set()) {
-        #if HAVE_STRSIGNAL
-	    printf ("[S] Error: %s\n", strsignal(sig));
-	#else
-	    printf ("[S] Error: %d\n", sig);
-	#endif
+	fprintf (stderr, "[S] Error: %s\n", strsignal(sig));
 	#ifndef NDEBUG
 	    print_backtrace();
 	#endif
@@ -86,6 +85,29 @@ void App::FatalSignalHandler (int sig) // static
 void App::MsgSignalHandler (int sig) // static
 {
     s_ReceivedSignals |= S(sig);
+}
+
+#ifndef NDEBUG
+void App::Errorv (const char* fmt, va_list args) noexcept
+{
+    bool isFirst = _errors.empty();
+    _errors.appendv (fmt, args);
+    if (isFirst)
+	print_backtrace();
+}
+#endif
+
+bool App::ForwardError (mrid_t oid, mrid_t eoid) noexcept
+{
+    auto& m = MsgerpById (oid);
+    if (!m.created())
+	return false;
+    if (m->OnError (eoid, Errors()))
+	return true;
+    auto nextoid = m->CreatorId();
+    if (nextoid == oid || !ValidMsgerId(nextoid))
+	return false;
+    return ForwardError (nextoid, oid);
 }
 
 //}}}-------------------------------------------------------------------
@@ -198,6 +220,10 @@ void App::ProcessMessageQueue (void) noexcept
 
 	    if (!accepted && msg.Dest() != mrid_Broadcast)
 		DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger. Did you forget to add the interface to the Dispatch override?\n");
+
+	    // Check for errors generated during this dispatch
+	    if (!Errors().empty() && !ForwardError (mg, mg))
+		Quit (EXIT_FAILURE);
 	}
     }
     // End-of-iteration housekeeping
@@ -232,7 +258,7 @@ App::msgq_t::size_type App::HasMessagesFor (mrid_t mid) const noexcept
 
 void App::RunTimers (void) noexcept
 {
-    if (_timers.empty())
+    if (_timers.empty() || Flag(f_Quitting))
 	return;
 
     // Populate the fd list and find the nearest timer

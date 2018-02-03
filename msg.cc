@@ -5,6 +5,7 @@
 
 #include "msg.h"
 #include "app.h"
+#include <stdarg.h>
 
 namespace cwiclo {
 
@@ -46,5 +47,15 @@ void ProxyB::CommitMsg (Msg& msg, ostream& os) noexcept
     assert (msg.Size() == msg.Verify() && "Message body does not match method signature");
 }
 #endif
+
+//----------------------------------------------------------------------
+
+void Msger::Error (const char* fmt, ...) noexcept // static
+{
+    va_list args;
+    va_start (args, fmt);
+    App::Instance().Errorv (fmt, args);
+    va_end (args);
+}
 
 } // namespace cwiclo

@@ -15,8 +15,6 @@
 // Define to the address where bug reports for this package should be sent.
 #define @PKG_UNAME@_BUGREPORT	"@PKG_BUGREPORT@"
 
-#define HAVE_STRSIGNAL 1	// Define to 1 if you have the 'strsignal' function.
-
 // Common includes
 #include <stddef.h>
 #include <stdbool.h>

@@ -63,9 +63,6 @@ case "$SYSNAME" in
     *)			SYSNAME="linux";;
 esac
 
-if [ "$SYSNAME" = "mac" -o "$SYSNAME" = "bsd" ]; then
-    sub "s/#define \(HAVE_STRSIGNAL\) 1/#undef \1/g"
-fi
 if [ "$SYSNAME" != "linux" ]; then
     sub "s/-p --ignore-fail-on-non-empty//"
 fi
