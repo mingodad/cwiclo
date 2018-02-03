@@ -28,6 +28,7 @@ auto PTimer::Now (void) noexcept -> mstime_t
 App*	App::s_App		= nullptr;	// static
 int	App::s_ExitCode		= EXIT_SUCCESS;	// static
 uint32_t App::s_ReceivedSignals	= 0;		// static
+atomic_flag App::s_outqLock = ATOMIC_FLAG_INIT;	// static
 
 App::App (void)
 : Msger (mrid_App)
@@ -185,13 +186,7 @@ void App::DeleteUnusedMsgers (void) noexcept
 
 void App::ProcessMessageQueue (void) noexcept
 {
-    // Setup the queues
-    _inq.clear();		// input queue was processed on the last iteration
-    _inq.swap (move(_outq));	// output queue now becomes the input queue
-    if (_inq.empty()) {
-	DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
-	SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
-    }
+    SwapQueues();
 
     // Dispatch all messages in the input queue
     for (auto& msg : _inq) {
@@ -233,6 +228,19 @@ void App::ProcessMessageQueue (void) noexcept
     ForwardReceivedSignals();
 }
 
+void App::SwapQueues (void) noexcept
+{
+    _inq.clear();		// input queue was processed on the last iteration
+    {
+	atomic_scope_lock qlock (s_outqLock);
+	_inq.swap (move(_outq));	// output queue now becomes the input queue
+    }
+    if (_inq.empty()) {
+	DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
+    }
+}
+
 void App::ForwardReceivedSignals (void) noexcept
 {
     auto oldrs = s_ReceivedSignals;
@@ -248,6 +256,7 @@ void App::ForwardReceivedSignals (void) noexcept
 
 App::msgq_t::size_type App::HasMessagesFor (mrid_t mid) const noexcept
 {
+    atomic_scope_lock qlock (s_outqLock);
     App::msgq_t::size_type n = 0;
     for (auto& msg : _outq)
 	if (msg.Dest() == mid)

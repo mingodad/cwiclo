@@ -115,8 +115,7 @@ public:
     void		ProcessArgs (argc_t, argv_t)	{ }
     inline int		Run (void) noexcept;
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
-    Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE)
-			    { return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo); }
+    inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE) noexcept;
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
     auto		HasTimers (void) const		{ return _timers.size(); }
     bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
@@ -226,6 +225,7 @@ private:
 				    return mii->factory;
 			    return nullptr;
 			}
+    inline void		SwapQueues (void) noexcept;
     Msger*		CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
     inline void		DeleteUnusedMsgers (void) noexcept;
     inline void		ForwardReceivedSignals (void) noexcept;
@@ -242,6 +242,7 @@ private:
     static const MsgerImplements s_MsgerImpls[];
     static int		s_ExitCode;
     static uint32_t	s_ReceivedSignals;
+    static atomic_flag	s_outqLock;
 };
 
 //----------------------------------------------------------------------
@@ -286,6 +287,11 @@ void App::RunTimers (void) noexcept
     CheckPollTimers (fds);
 }
 
+Msg& App::CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid, Msg::fdoffset_t fdo) noexcept
+{
+    atomic_scope_lock qlock (s_outqLock);
+    return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo);
+}
 //}}}-------------------------------------------------------------------
 //{{{ main template
 

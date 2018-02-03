@@ -208,6 +208,32 @@ enum memory_order {
     memory_order_seq_cst = __ATOMIC_SEQ_CST
 };
 
+namespace {
+
+// Use in lock wait loops to relax the CPU load
+static inline void tight_loop_pause (void)
+{
+    #if __x86__
+	#if __clang__
+	    __asm__ volatile ("rep nop");
+	#else
+	    __builtin_ia32_pause();
+	#endif
+    #else
+	usleep (1);
+    #endif
+}
+
+template <typename T>
+static inline T kill_dependency (T v) noexcept
+    { return T(v); }
+static inline void atomic_thread_fence (memory_order order) noexcept
+    { __atomic_thread_fence (order); }
+static inline void atomic_signal_fence (memory_order order) noexcept
+    { __atomic_signal_fence (order); }
+
+} // namespace
+
 class atomic_flag {
     bool		_v;
 public:
@@ -222,17 +248,13 @@ public:
 };
 #define ATOMIC_FLAG_INIT	{false}
 
-namespace {
+class atomic_scope_lock {
+    atomic_flag& _f;
+public:
+    explicit atomic_scope_lock (atomic_flag& f) noexcept : _f(f) { while (_f.test_and_set()) tight_loop_pause(); }
+    ~atomic_scope_lock (void) noexcept { _f.clear(); }
+};
 
-template <typename T>
-static inline T kill_dependency (T v) noexcept
-    { return T(v); }
-static inline void atomic_thread_fence (memory_order order) noexcept
-    { __atomic_thread_fence (order); }
-static inline void atomic_signal_fence (memory_order order) noexcept
-    { __atomic_signal_fence (order); }
-
-} // namespace
 //}}}-------------------------------------------------------------------
 
 } // namespace cwiclo
