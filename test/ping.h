@@ -98,7 +98,7 @@ public:
 			PingMsger (const Msg::Link& l)
 			    : Msger(l),_reply(l),_nPings(0)
 			    { LOG ("Created Ping%hu\n", MsgerId()); }
-    virtual		~PingMsger (void) noexcept
+    virtual		~PingMsger (void) noexcept override
 			    { LOG ("Destroy Ping%hu\n", MsgerId()); }
     inline void		Ping_Ping (uint32_t v) {
 			    LOG ("Ping%hu: %u, %u total\n", MsgerId(), v, ++_nPings);

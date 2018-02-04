@@ -30,18 +30,6 @@ int	App::s_ExitCode		= EXIT_SUCCESS;	// static
 uint32_t App::s_ReceivedSignals	= 0;		// static
 atomic_flag App::s_outqLock = ATOMIC_FLAG_INIT;	// static
 
-App::App (void) noexcept
-: Msger (mrid_App)
-,_outq()
-,_inq()
-,_msgers()
-,_errors()
-{
-    assert (!s_App && "there must be only one App object");
-    s_App = this;
-    _msgers.emplace_back (this);
-}
-
 App::~App (void) noexcept
 {
     if (!_errors.empty())

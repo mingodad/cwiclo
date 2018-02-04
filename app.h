@@ -134,8 +134,8 @@ public:
     void		Errorv (const char* fmt, va_list args) noexcept;
 #endif
 protected:
-			App (void) noexcept;
-    virtual		~App (void) noexcept;
+    inline		App (void) noexcept;
+    virtual		~App (void) noexcept override;
     static void		FatalSignalHandler (int sig) noexcept;
     static void		MsgSignalHandler (int sig) noexcept;
 private:
@@ -200,7 +200,7 @@ public:
     public:
 			Timer (const Msg::Link& l) : Msger(l),_nextfire(),_reply(l),_cmd(),_fd(-1) { App::Instance().AddTimer (this); }
 			~Timer (void) noexcept	{ App::Instance().RemoveTimer (this); }
-	virtual bool	Dispatch (const Msg& msg) noexcept { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
+	virtual bool	Dispatch (const Msg& msg) noexcept override { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
 	void		Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms)
 			    { _cmd = cmd; _fd = fd; _nextfire = timeoutms + (timeoutms <= PTimer::TIMER_MAX ? PTimer::Now() : 0); }
 	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WATCH_STOP; _fd = -1; _nextfire = PTimer::TIMER_NONE; }
@@ -247,6 +247,18 @@ private:
 };
 
 //----------------------------------------------------------------------
+
+App::App (void) noexcept
+: Msger (mrid_App)
+,_outq()
+,_inq()
+,_msgers()
+,_errors()
+{
+    assert (!s_App && "there must be only one App object");
+    s_App = this;
+    _msgers.emplace_back (this);
+}
 
 int App::Run (void) noexcept
 {
