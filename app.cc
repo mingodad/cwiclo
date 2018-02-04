@@ -5,7 +5,7 @@
 
 #include "app.h"
 #include <signal.h>
-#include <sys/wait.h>
+#include <time.h>
 
 //{{{ Timer and Signal interfaces --------------------------------------
 namespace cwiclo {
@@ -19,7 +19,7 @@ auto PTimer::Now (void) noexcept -> mstime_t
     struct timespec t;
     if (0 > clock_gettime (CLOCK_REALTIME, &t))
 	return 0;
-    return t.tv_sec * 1000 + t.tv_nsec / 1000000;
+    return mstime_t(t.tv_nsec) / 1000000 + t.tv_sec * 1000;
 }
 
 //}}}-------------------------------------------------------------------
@@ -30,7 +30,7 @@ int	App::s_ExitCode		= EXIT_SUCCESS;	// static
 uint32_t App::s_ReceivedSignals	= 0;		// static
 atomic_flag App::s_outqLock = ATOMIC_FLAG_INIT;	// static
 
-App::App (void)
+App::App (void) noexcept
 : Msger (mrid_App)
 ,_outq()
 ,_inq()
@@ -39,7 +39,6 @@ App::App (void)
 {
     assert (!s_App && "there must be only one App object");
     s_App = this;
-    InstallSignalHandlers();
     _msgers.emplace_back (this);
 }
 
@@ -60,7 +59,7 @@ enum {
 };
 enum { qc_ShellSignalQuitOffset = 128 };
 
-void App::InstallSignalHandlers (void)
+void App::InstallSignalHandlers (void) noexcept // static
 {
     for (auto sig = 0u; sig < NSIG; ++sig) {
 	if (sigset_Msg & S(sig))
@@ -70,7 +69,7 @@ void App::InstallSignalHandlers (void)
     }
 }
 
-void App::FatalSignalHandler (int sig) // static
+void App::FatalSignalHandler (int sig) noexcept // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set()) {
@@ -83,7 +82,7 @@ void App::FatalSignalHandler (int sig) // static
     _Exit (qc_ShellSignalQuitOffset+sig);
 }
 
-void App::MsgSignalHandler (int sig) // static
+void App::MsgSignalHandler (int sig) noexcept // static
 {
     s_ReceivedSignals |= S(sig);
 }

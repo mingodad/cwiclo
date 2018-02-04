@@ -7,7 +7,6 @@
 #include "msg.h"
 #include "set.h"
 #include <sys/poll.h>
-#include <time.h>
 
 //{{{ Debugging macros -------------------------------------------------
 namespace cwiclo {
@@ -112,6 +111,7 @@ public:
     enum { f_Quitting = Msger::f_Last, f_DebugMsgTrace, f_Last };
 public:
     static auto&	Instance (void)			{ return *s_App; }
+    static void		InstallSignalHandlers (void) noexcept;
     void		ProcessArgs (argc_t, argv_t)	{ }
     inline int		Run (void) noexcept;
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
@@ -134,10 +134,10 @@ public:
     void		Errorv (const char* fmt, va_list args) noexcept;
 #endif
 protected:
-			App (void);
+			App (void) noexcept;
     virtual		~App (void) noexcept;
-    static void		FatalSignalHandler (int sig);
-    static void		MsgSignalHandler (int sig);
+    static void		FatalSignalHandler (int sig) noexcept;
+    static void		MsgSignalHandler (int sig) noexcept;
 private:
     //{{{2 Msgerp ------------------------------------------------------
     struct Msgerp {
@@ -217,7 +217,6 @@ public:
     };
     //}}}2--------------------------------------------------------------
 private:
-    inline void		InstallSignalHandlers (void);
     mrid_t		AllocateMrid (void) noexcept;
     auto&		MsgerpById (mrid_t id)	{ return _msgers[id]; }
     pfn_msger_factory	MsgerFactoryFor (iid_t id) {
@@ -300,6 +299,7 @@ Msg& App::CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid
 template <typename A>
 inline int Tmain (typename A::argc_t argc, typename A::argv_t argv)
 {
+    A::InstallSignalHandlers();
     auto& a = A::Instance();
     a.ProcessArgs (argc, argv);
     return a.Run();
