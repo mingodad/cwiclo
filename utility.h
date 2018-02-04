@@ -87,6 +87,20 @@ template <typename T, size_t N> constexpr inline auto ArrayEnd (T(&a)[N])
 /// Shorthand for container reverse iteration.
 #define eachfor(i,ctr)	for (auto i = (ctr).end(); i-- > (ctr).begin();)
 
+/// Returns s+strlen(s)+1
+static inline NONNULL() const char* strnext_r (const char* s, unsigned* n)
+{
+#if __x86__
+    if (!compile_constant(strlen(s)))
+	asm ("repnz\tscasb":"+D"(s),"+c"(*n):"a"(0):"memory");
+    else
+#endif
+	s+=strlen(s)+1;
+    return s;
+}
+static inline NONNULL() const char* strnext (const char* s)
+    { unsigned n = UINT_MAX; return strnext_r(s,&n); }
+
 //}}}----------------------------------------------------------------------
 //{{{ bswap
 

@@ -35,8 +35,12 @@ using iid_t = const char*;
 using methodid_t = const char*;
 
 // Interface name and methods are packed together for easy lookup
-static inline constexpr iid_t InterfaceOfMethod (methodid_t mid)
+static inline constexpr iid_t InterfaceOfMethod (methodid_t __restrict__ mid)
     { return mid-mid[-1]; }
+
+// Signatures immediately follow the method in the pack
+static inline const char* SignatureOfMethod (methodid_t __restrict__ mid)
+    { return strnext(mid); }
 
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, size_t mnamesz) noexcept;
@@ -116,6 +120,7 @@ public:
     inline auto		Size (void) const	{ return _body.size(); }
     inline auto		Method (void) const	{ return _method; }
     inline auto		Interface (void) const	{ return InterfaceOfMethod (Method()); }
+    inline auto		Signature (void) const	{ return SignatureOfMethod (Method()); }
     inline auto		Extid (void) const	{ return _extid; }
     inline auto		FdOffset (void) const	{ return _fdoffset; }
     inline istream	Read (void) const	{ return istream (_body); }

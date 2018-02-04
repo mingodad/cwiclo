@@ -24,12 +24,16 @@ public:
     inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
     inline constexpr		istream (const cmemlink& m)			: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
-    inline constexpr auto	end (void) const __restrict__			{ return _e; }
-    inline constexpr streamsize	remaining (void) const __restrict__		{ return end()-_p; }
+    inline constexpr auto	end (void) const __restrict__		{ return _e; }
+    inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
     template <typename T>
     inline auto			ptr (void) const __restrict__		{ return reinterpret_cast<const T*>(_p); }
     inline void			skip (streamsize sz) __restrict__	{ seek (_p + sz); }
-    inline void			align (streamsize g) __restrict__	{ seek (const_pointer (Align (uintptr_t(_p), g))); }
+    inline void			unread (streamsize sz) __restrict__	{ seek (_p - sz); }
+    inline void			align (streamsize g) __restrict__	{ seek (alignptr(g)); }
+    inline streamsize		alignsz (streamsize g) const		{ return alignptr(g) - _p; }
+    inline bool			can_align (streamsize g) const		{ return alignptr(g) <= _e; }
+    inline bool			aligned (streamsize g) const		{ return alignptr(g) == _p; }
     inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    memcpy (p, _p, sz); skip(sz);
@@ -53,7 +57,8 @@ public:
     template <typename T>
     inline istream&		operator>> (T& v);
 protected:
-    inline void			seek (const_pointer p) __restrict__	{ assert(p <= end()); _p = p; }
+    inline void			seek (const_pointer p) __restrict__		{ assert(p <= end()); _p = p; }
+    inline const_pointer	alignptr (streamsize g) const __restrict__	{ return const_pointer (Align (uintptr_t(_p), g)); }
 private:
     const_pointer		_p;
     const const_pointer		_e;
@@ -92,6 +97,9 @@ public:
 				    }
 				    _p = p;
 				}
+    inline streamsize		alignsz (streamsize g) const	{ return alignptr(g) - _p; }
+    inline bool			can_align (streamsize g) const	{ return alignptr(g) <= _e; }
+    inline bool			aligned (streamsize g) const	{ return alignptr(g) == _p; }
     inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    _p = (pointer) mempcpy (_p, p, sz);
@@ -107,6 +115,7 @@ public:
     inline ostream&		operator<< (const T& v);
 protected:
     inline void			seek (pointer p) __restrict__	{ assert(p < end()); _p = p; }
+    inline const_pointer	alignptr (streamsize g) const __restrict__	{ return const_pointer (Align (uintptr_t(_p), g)); }
 private:
     pointer	_p;
     const const_pointer		_e;
@@ -126,8 +135,11 @@ public:
     inline constexpr streamsize	remaining (void) const	{ return UINT32_MAX; }
     inline void			skip (streamsize sz)	{ _sz += sz; }
     inline void			align (streamsize g)	{ _sz = Align (_sz, g); }
+    inline constexpr streamsize	alignsz (streamsize g) const	{ return Align(_sz,g) - _sz; }
+    inline constexpr bool	can_align (streamsize) const	{ return true; }
+    inline constexpr bool	aligned (streamsize g) const	{ return Align(_sz,g) == _sz; }
     inline void			write (const void*, streamsize sz) { skip (sz); }
-    inline void			write_strz (const char* s) { write (s, strlen(s)+1); }
+    inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>
     inline void			writev (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
