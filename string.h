@@ -71,17 +71,27 @@ public:
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<l); return erase (f, l-f); }
     inline void		pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
     inline void		clear (void)					{ assert (capacity() && "modifying a const linked string"); memlink::resize (0); *end() = 0; }
+
     void		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen) noexcept;
     inline void		replace (const_iterator f, const_iterator l, const_pointer s)			{ replace (f, l, s, strlen(s)); }
     inline void		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ replace (f, l, i1, i2-i1); }
     inline void		replace (const_iterator f, const_iterator l, const string& s)			{ replace (f, l, s.begin(), s.end()); }
     void		replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept;
-    inline auto		find (const_pointer s, const_iterator fi) const		{ return strstr (fi, s); }
+
+    inline auto		find (const_pointer s, const_iterator fi) const		{ return const_iterator (strstr (fi, s)); }
     inline auto		find (const string& s, const_iterator fi) const		{ return find (s.c_str(), fi); }
     inline auto		find (const_pointer s) const				{ return find (s, begin()); }
     inline auto		find (const string& s) const				{ return find (s, begin()); }
-    inline auto		find (const_reference c, const_iterator fi) const	{ return strchr (fi, c); }
+    inline auto		find (const_reference c, const_iterator fi) const	{ return const_iterator (strchr (fi, c)); }
     inline auto		find (const_reference c) const				{ return find (c, begin()); }
+
+    inline auto		find (const_pointer s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->find(s,fi)); }
+    inline auto		find (const string& s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->find(s,fi)); }
+    inline auto		find (const_pointer s)					{ return const_cast<iterator>(const_cast<const string*>(this)->find(s)); }
+    inline auto		find (const string& s)					{ return const_cast<iterator>(const_cast<const string*>(this)->find(s)); }
+    inline auto		find (const_reference c, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->find(c,fi)); }
+    inline auto		find (const_reference c)				{ return const_cast<iterator>(const_cast<const string*>(this)->find(c)); }
+
     const_iterator	rfind (const_pointer s, const_iterator fi) const noexcept;
     inline auto		rfind (const string& s, const_iterator fi) const	{ return rfind (s.c_str(), fi); }
     inline auto		rfind (const_pointer s) const				{ return rfind (s, end()); }

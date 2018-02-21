@@ -424,6 +424,24 @@ inline auto uninitialized_fill_n (I first, ssize_t n, const T& v)
 //{{{ Searching algorithms
 
 template <typename I, typename T>
+I linear_search (I f, I l, const T& v)
+{
+    for (; f < l; ++f)
+	if (*f == v)
+	    return f;
+    return nullptr;
+}
+
+template <typename I, typename P>
+I linear_search_if (I f, I l, P p)
+{
+    for (; f < l; ++f)
+	if (p(*f))
+	    return f;
+    return nullptr;
+}
+
+template <typename I, typename T>
 auto lower_bound (I f, I l, const T& v)
 {
     while (f < l) {
@@ -441,15 +459,6 @@ inline auto binary_search (I f, I l, const T& v)
 {
     auto b = lower_bound (f, l, v);
     return (b == l || v < *b) ? nullptr : b;
-}
-
-template <typename I, typename T>
-I linear_search (I f, I l, const T& v)
-{
-    for (; f < l; ++f)
-	if (*f == v)
-	    return f;
-    return nullptr;
 }
 
 template <typename I, typename T>
@@ -481,20 +490,41 @@ void sort (I f, I l)
 }
 
 template <typename Container>
-auto lower_bound (const Container& c, typename Container::const_reference v)
+auto linear_search (Container& c, typename Container::const_reference v)
+    { return linear_search (c.begin(), c.end(), v); }
+template <typename Container, typename P>
+auto linear_search_if (Container& c, P p)
+    { return linear_search_if (c.begin(), c.end(), p); }
+template <typename Container>
+auto lower_bound (Container& c, typename Container::const_reference v)
     { return lower_bound (c.begin(), c.end(), v); }
 template <typename Container>
-auto upper_bound (const Container& c, typename Container::const_reference v)
+auto upper_bound (Container& c, typename Container::const_reference v)
     { return upper_bound (c.begin(), c.end(), v); }
 template <typename Container>
-auto binary_search (const Container& c, typename Container::const_reference v)
+auto binary_search (Container& c, typename Container::const_reference v)
     { return binary_search (c.begin(), c.end(), v); }
-template <typename Container>
-auto linear_search (const Container& c, typename Container::const_reference v)
-    { return linear_search (c.begin(), c.end(), v); }
 template <typename Container>
 void sort (Container& c)
     { sort (c.begin(), c.end()); }
+
+//}}}-------------------------------------------------------------------
+//{{{ Other algorithms
+
+template <typename Container, typename Discriminator>
+void remove_if (Container& ctr, Discriminator f)
+{
+    foreach (i, ctr)
+	if (f(*i))
+	    --(i = ctr.erase(i));
+}
+
+#ifndef UC_VERSION
+const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexcept;
+#endif
+
+enum { SD_LISTEN_FDS_START = STDERR_FILENO+1 };
+unsigned sd_listen_fds (void) noexcept;
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

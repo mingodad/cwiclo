@@ -100,6 +100,39 @@ extern "C" void hexdump (const void* vp, size_t n) noexcept
 	puts (line);
     }
 }
+
+const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexcept
+{
+    if (efn[0] == '/' || (efn[0] == '.' && (efn[1] == '/' || efn[1] == '.'))) {
+	if (0 != access (efn, X_OK))
+	    return NULL;
+	return efn;
+    }
+
+    const char* penv = getenv("PATH");
+    if (!penv)
+	penv = "/bin:/usr/bin:.";
+    char path [PATH_MAX];
+    snprintf (ArrayBlock(path), "%s/%s"+3, penv);
+
+    for (char *pf = path, *pl = pf; *pf; pf = pl) {
+	while (*pl && *pl != ':') ++pl;
+	*pl++ = 0;
+	snprintf (exe, exesz, "%s/%s", pf, efn);
+	if (0 == access (exe, X_OK))
+	    return exe;
+    }
+    return NULL;
+}
 #endif
+
+unsigned sd_listen_fds (void) noexcept
+{
+    const char* e = getenv("LISTEN_PID");
+    if (!e || getpid() != (pid_t) strtoul(e, NULL, 10))
+	return 0;
+    e = getenv("LISTEN_FDS");
+    return e ? strtoul (e, NULL, 10) : 0;
+}
 
 } // namespace cwiclo

@@ -2,13 +2,10 @@
 
 test/SRCS	:= $(wildcard test/*.cc)
 test/TSRCS	:= $(wildcard test/?????.cc)
-test/ASRCS	:= $(filter-out ${test/TSRCS}, ${test/SRCS})
 test/TESTS	:= $(addprefix $O,$(test/TSRCS:.cc=))
-test/TOBJS	:= $(addprefix $O,$(test/TSRCS:.cc=.o))
-test/AOBJS	:= $(addprefix $O,$(test/ASRCS:.cc=.o))
-test/OBJS	:= ${test/TOBJS} ${test/AOBJS}
-test/DEPS	:= ${test/TOBJS:.o=.d} ${test/AOBJS:.o=.d}
-test/OUTS	:= ${test/TOBJS:.o=.out}
+test/OBJS	:= $(addprefix $O,$(test/SRCS:.cc=.o))
+test/DEPS	:= ${test/OBJS:.o=.d}
+test/OUTS	:= ${test/TESTS:=.out}
 
 ################ Compilation ###########################################
 
@@ -24,11 +21,23 @@ test/check:	${test/TESTS}
 	@for i in ${test/TESTS}; do \
 	    TEST="test/$$(basename $$i)";\
 	    echo "Running $$TEST";\
-	    $$i < $$TEST.cc &> $$i.out;\
+	    PATH="$Otest" $$i < $$TEST.cc &> $$i.out;\
 	    diff $$TEST.std $$i.out && rm -f $$i.out;\
 	done
 
-${test/TESTS}: $Otest/%: $Otest/%.o ${test/AOBJS} ${LIBA}
+$Otest/tlibf:	$Otest/tlibf.o ${LIBA}
+	@echo "Linking $@ ..."
+	@${CC} ${LDFLAGS} -o $@ $^
+
+$Otest/fwork:	$Otest/fwork.o $Otest/ping.o ${LIBA}
+	@echo "Linking $@ ..."
+	@${CC} ${LDFLAGS} -o $@ $^
+
+$Otest/ipcom:	$Otest/ipcom.o $Otest/ping.o ${LIBA} | $Otest/ipcomsrv
+	@echo "Linking $@ ..."
+	@${CC} ${LDFLAGS} -o $@ $^
+
+$Otest/ipcomsrv:	$Otest/ipcomsrv.o $Otest/ping.o ${LIBA}
 	@echo "Linking $@ ..."
 	@${CC} ${LDFLAGS} -o $@ $^
 
@@ -37,10 +46,10 @@ ${test/TESTS}: $Otest/%: $Otest/%.o ${test/AOBJS} ${LIBA}
 clean:	test/clean
 test/clean:
 	@if [ -d $Otest ]; then\
-	    rm -f ${test/TESTS} ${test/OBJS} ${test/DEPS} ${test/OUTS} $Otest/.d;\
+	    rm -f ${test/TESTS} $Otest/ipcomsrv ${test/OBJS} ${test/DEPS} ${test/OUTS} $Otest/.d;\
 	    rmdir ${BUILDDIR}/test;\
 	fi
 
-${test/OBJS}: Makefile test/Module.mk ${CONFS} $Otest/.d config.h
+${test/OBJS}: Makefile test/Module.mk ${CONFS} $Otest/.d
 
 -include ${test/DEPS}

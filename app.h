@@ -7,13 +7,14 @@
 #include "msg.h"
 #include "set.h"
 #include <sys/poll.h>
+#include <syslog.h>
 
 //{{{ Debugging macros -------------------------------------------------
 namespace cwiclo {
 
 #ifndef NDEBUG
     #define DEBUG_MSG_TRACE	App::Instance().Flag(App::f_DebugMsgTrace)
-    #define DEBUG_PRINTF(...)	do { if (DEBUG_MSG_TRACE) fprintf (stderr, __VA_ARGS__); } while (false)
+    #define DEBUG_PRINTF(...)	do { if (DEBUG_MSG_TRACE) printf (__VA_ARGS__); fflush(stdout); } while (false)
 #else
     #define DEBUG_MSG_TRACE	false
     #define DEBUG_PRINTF(...)	do {} while (false)
@@ -42,7 +43,7 @@ public:
     };
 public:
     explicit	PTimer (mrid_t caller) : Proxy (caller) {}
-    void	Watch (ETimerWatchCmd cmd, int fd, mstime_t timeoutms)
+    void	Watch (ETimerWatchCmd cmd, int fd, mstime_t timeoutms = TIMER_NONE)
 		    { Send (M_Watch(), cmd, fd, timeoutms); }
     void	Stop (void)					{ Watch (WATCH_STOP, -1, TIMER_NONE); }
     void	Timer (mstime_t timeoutms)			{ Watch (WATCH_TIMER, -1, timeoutms); }
@@ -115,7 +116,9 @@ public:
     void		ProcessArgs (argc_t, argv_t)	{ }
     inline int		Run (void) noexcept;
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
-    inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_IN_MESSAGE) noexcept;
+    inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_INCLUDED) noexcept;
+    inline void		ForwardMsg (Msg&& msg, Msg::Link& l) noexcept;
+    static iid_t	InterfaceByName (const char* iname, streamsize inamesz) noexcept;
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
     auto		HasTimers (void) const		{ return _timers.size(); }
     bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
@@ -198,11 +201,13 @@ public:
     friend class Timer;
     class Timer : public Msger {
     public:
-			Timer (const Msg::Link& l) : Msger(l),_nextfire(),_reply(l),_cmd(),_fd(-1) { App::Instance().AddTimer (this); }
-			~Timer (void) noexcept	{ App::Instance().RemoveTimer (this); }
-	virtual bool	Dispatch (const Msg& msg) noexcept override { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
-	void		Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms)
-			    { _cmd = cmd; _fd = fd; _nextfire = timeoutms + (timeoutms <= PTimer::TIMER_MAX ? PTimer::Now() : 0); }
+			Timer (const Msg::Link& l) : Msger(l),_nextfire(PTimer::TIMER_NONE),_reply(l),_cmd(),_fd(-1)
+			    { App::Instance().AddTimer (this); }
+			~Timer (void) noexcept
+			    { App::Instance().RemoveTimer (this); }
+	virtual bool	Dispatch (Msg& msg) noexcept override
+			    { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
+	inline void	Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms) noexcept;
 	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WATCH_STOP; _fd = -1; _nextfire = PTimer::TIMER_NONE; }
 	void		Fire (void)		{ _reply.Timer (_fd); Stop(); }
 	auto		Fd (void) const		{ return _fd; }
@@ -262,6 +267,8 @@ App::App (void) noexcept
 
 int App::Run (void) noexcept
 {
+    if (!Errors().empty())	// Check for errors generated in ctor and ProcessArgs
+	return EXIT_FAILURE;
     while (!Flag (f_Quitting)) {
 	MessageLoopOnce();
 	RunTimers();
@@ -272,25 +279,36 @@ int App::Run (void) noexcept
 void App::RunTimers (void) noexcept
 {
     auto ntimers = HasTimers();
-    if (!ntimers || Flag(f_Quitting))
+    if (!ntimers || Flag(f_Quitting)) {
+	if (_outq.empty()) {
+	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	    SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
+	}
 	return;
+    }
 
     // Populate the fd list and find the nearest timer
     pollfd fds [ntimers];
     int timeout;
     auto nfds = GetPollTimerList (fds, ntimers, timeout);
-    if (!nfds && !timeout)
+    if (!nfds && !timeout) {
+	if (_outq.empty()) {
+	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	    SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
+	}
 	return;
+    }
 
     // And wait
     if (DEBUG_MSG_TRACE) {
+	DEBUG_PRINTF ("----------------------------------------------------------------------\n");
 	if (timeout > 0)
 	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
 	else if (timeout < 0)
 	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
 	else if (!timeout)
 	    DEBUG_PRINTF ("[I] Checking ");
-	DEBUG_PRINTF ("%u file descriptors from %u timers", nfds, ntimers);
+	DEBUG_PRINTF ("%u file descriptors from %u timers\n", nfds, ntimers);
     }
 
     // And poll
@@ -300,11 +318,26 @@ void App::RunTimers (void) noexcept
     CheckPollTimers (fds);
 }
 
+void App::Timer::Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms) noexcept
+{
+    _cmd = cmd;
+    SetFlag (f_Unused, _cmd == PTimer::WATCH_STOP);
+    _fd = fd;
+    _nextfire = timeoutms + (timeoutms <= PTimer::TIMER_MAX ? PTimer::Now() : PTimer::TIMER_NONE);
+}
+
 Msg& App::CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid, Msg::fdoffset_t fdo) noexcept
 {
     atomic_scope_lock qlock (s_outqLock);
     return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo);
 }
+
+void App::ForwardMsg (Msg&& msg, Msg::Link& l) noexcept
+{
+    atomic_scope_lock qlock (s_outqLock);
+    _outq.emplace_back (move(msg), CreateLink(l,msg.Interface()));
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ main template
 

@@ -39,9 +39,9 @@ public:
     inline constexpr auto	size (void) const			{ return _size; }
     inline constexpr auto	empty (void) const			{ return !size(); }
     inline constexpr auto	capacity (void) const			{ return _capacity; }
-    inline constexpr auto	data (void) const			{ return _data; }
-    inline constexpr auto	cdata (void) const			{ return _data; }
-    inline constexpr auto	begin (void) const			{ return data(); }
+    constexpr const_pointer	data (void) const			{ return _data; }
+    constexpr const_pointer	cdata (void) const			{ return _data; }
+    constexpr const_iterator	begin (void) const			{ return data(); }
     inline constexpr auto	cbegin (void) const			{ return begin(); }
     inline constexpr auto	end (void) const			{ return begin()+size(); }
     inline constexpr auto	cend (void) const			{ return end(); }
@@ -64,7 +64,7 @@ public:
     void			write (ostream& os, size_type elsize = sizeof(value_type)) const noexcept;
     void			write (sstream& os, size_type elsize = sizeof(value_type)) const noexcept;
 protected:
-    inline constexpr auto	dataw (void)				{ return _data; }
+    inline constexpr auto&	dataw (void)				{ return _data; }
     inline constexpr bool	zero_terminated (void) const		{ return _zerot; }
     inline void			set_capacity (size_type c)		{ _capacity = c; }
 private:
@@ -91,8 +91,8 @@ public:
 				using cmemlink::at;
     inline constexpr		memlink (const memlink& v)		: cmemlink(v) {}
     inline			memlink (memlink&& v)			: cmemlink(move(v)) {}
-    inline constexpr auto	data (void)				{ return dataw(); }
-    inline constexpr auto	begin (void)				{ return data(); }
+    constexpr pointer		data (void)				{ return dataw(); }
+    constexpr iterator		begin (void)				{ return data(); }
     inline constexpr auto	end (void)				{ return begin()+size(); }
     inline constexpr auto	iat (size_type i)			{ assert (i <= size()); return begin() + i; }
     inline auto&		at (size_type i)			{ assert (i < size()); return begin()[i]; }

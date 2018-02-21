@@ -12,16 +12,33 @@ namespace cwiclo {
 methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, size_t mnamesz) noexcept
 {
     for (methodid_t __restrict__ mid = iid+iid[-1]; mid[0]; mid += mid[0])
-	if (uint8_t(mid[0]) == mnamesz && 0 == memcmp (mname, mid+2, mnamesz))
+	if (uint8_t(mid[0]-2) == mnamesz && 0 == memcmp (mname, mid+2, mnamesz))
 	    return mid+2;
     return nullptr;
 }
 
 //----------------------------------------------------------------------
 
+void ProxyB::CreateDestAs (iid_t iid) noexcept
+{
+    App::Instance().CreateLink (_link, iid);
+}
+
 Msg& ProxyB::CreateMsg (methodid_t mid, streamsize sz) noexcept
 {
     return App::Instance().CreateMsg (_link, mid, sz);
+}
+
+void ProxyB::Forward (Msg&& msg) noexcept
+{
+    App::Instance().ForwardMsg (move(msg), _link);
+}
+
+void ProxyB::FreeId (void) noexcept
+{
+    auto& app = App::Instance();
+    if (app.ValidMsgerId (Dest()))
+	app.FreeMrid (Dest());
 }
 
 #ifndef NDEBUG
@@ -42,14 +59,33 @@ void Msger::Error (const char* fmt, ...) noexcept // static
     va_end (args);
 }
 
+void Msger::ErrorLibc (const char* f) noexcept // static
+{
+    Error ("%s: %s", f, strerror(errno));
+}
+
 //----------------------------------------------------------------------
 
-Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset_t fdo)
+Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset_t fdo) noexcept
 :_method (mid)
 ,_link (l)
 ,_extid (extid)
 ,_fdoffset (fdo)
-,_body (size)
+,_body (Align (size, BODY_ALIGNMENT))
+{
+    // Message body is padded to BODY_ALIGNMENT
+    auto ppade = _body.end();
+    _body.memlink::resize (size);
+    for (auto p = _body.end(); p < ppade; ++p)
+	*p = 0;
+}
+
+Msg::Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid, fdoffset_t fdo) noexcept
+:_method (mid)
+,_link (l)
+,_extid (extid)
+,_fdoffset (fdo)
+,_body (move (body))
 {
 }
 
@@ -153,11 +189,10 @@ static streamsize ValidateSigelement (istream& is, const char*& sig) noexcept
     return sz;
 }
 
-streamsize Msg::Verify (void) const noexcept
+streamsize Msg::ValidateSignature (istream& is, const char* sig) noexcept // static
 {
-    auto is = Read();
     streamsize sz = 0;
-    for (auto sig = Signature(); *sig;) {
+    while (*sig) {
 	auto elsz = ValidateSigelement (is, sig);
 	if (!elsz)
 	    return 0;

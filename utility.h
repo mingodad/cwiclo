@@ -95,11 +95,19 @@ static inline NONNULL() const char* strnext_r (const char* s, unsigned* n)
 	asm ("repnz\tscasb":"+D"(s),"+c"(*n):"a"(0):"memory");
     else
 #endif
-	s+=strlen(s)+1;
+    { auto l = strnlen(s, *n)+1; s += l; *n -= l; }
     return s;
 }
 static inline NONNULL() const char* strnext (const char* s)
     { unsigned n = UINT_MAX; return strnext_r(s,&n); }
+
+template <typename T> inline constexpr auto advance (T* p, ptrdiff_t n) { return p + n; }
+template <> inline auto advance (void* p, ptrdiff_t n) { return advance ((char*)p, n); }
+template <> inline auto advance (const void* p, ptrdiff_t n) { return advance ((const char*)p, n); }
+
+template <typename T> inline constexpr auto distance (T* f, T* l) { return l-f; }
+template <> inline auto distance (void* f, void* l) { return distance ((char*)f, (char*)l); }
+template <> inline auto distance (const void* f, const void* l) { return distance ((const char*)f, (const char*)l); }
 
 //}}}----------------------------------------------------------------------
 //{{{ bswap
@@ -158,6 +166,9 @@ inline constexpr T Floor (T n, remove_reference_t<T> grain = c_DefaultAlignment)
 template <typename T>
 inline constexpr auto Align (T n, remove_reference_t<T> grain = c_DefaultAlignment)
     { return Floor<T> (n + MultBySign<T> (grain-1, n), grain); }
+template <typename T>
+inline constexpr bool IsAligned (T n, remove_reference_t<T> grain = c_DefaultAlignment)
+    { return !(n % grain); }
 template <typename T>
 inline constexpr auto Round (T n, remove_reference_t<T> grain)
     { return Floor<T> (n + MultBySign<T> (grain/2, n), grain); }

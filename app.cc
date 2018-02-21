@@ -32,8 +32,19 @@ atomic_flag App::s_outqLock = ATOMIC_FLAG_INIT;	// static
 
 App::~App (void) noexcept
 {
+    // Delete Msgers in reverse order of creation
+    while (!_msgers.empty())
+	_msgers.pop_back();
     if (!_errors.empty())
 	fprintf (stderr, "Error: %s\n", _errors.c_str());
+}
+
+iid_t App::InterfaceByName (const char* iname, streamsize inamesz) noexcept // static
+{
+    for (auto mii = s_MsgerImpls; mii->iface; ++mii)
+	if (InterfaceNameSize(mii->iface) == inamesz && 0 == memcmp (mii->iface, iname, inamesz))
+	    return mii->iface;
+    return nullptr;
 }
 
 //}}}-------------------------------------------------------------------
@@ -73,6 +84,8 @@ void App::FatalSignalHandler (int sig) noexcept // static
 void App::MsgSignalHandler (int sig) noexcept // static
 {
     s_ReceivedSignals |= S(sig);
+    if (sigset_Quit & S(sig))
+	App::Instance().Quit();
 }
 
 #ifndef NDEBUG
@@ -119,6 +132,7 @@ void App::FreeMrid (mrid_t id) noexcept
     assert (ValidMsgerId(id));
     DeleteMsger (id);
     MsgerpById(id).reset (nullptr);
+    DEBUG_PRINTF ("MsgerId %hu released\n", id);
 }
 
 Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
@@ -136,7 +150,8 @@ Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
 		DEBUG_PRINTF ("Error: failed to create Msger for interface %s\n", iid ? iid : "(iid_null)");
 		assert (!"Failed to create Msger for the given destination. Msger constructors are not allowed to fail or throw.");
 	    }
-	}
+	} else
+	    DEBUG_PRINTF ("Created Msger %hu as %s\n", l.dest, iid);
     #endif
     return r;
 }
@@ -160,12 +175,14 @@ void App::DeleteMsger (mrid_t mid) noexcept
     auto& m = _msgers[mid];
     if (!m.created())
 	return;
+    auto mcrid = m->CreatorId();
+    m.destroy();
     // Notify connected Msgers of this one's destruction
     for (auto& u : _msgers)
-	if (u.created() && u->MsgerId() != m->MsgerId() && (u->CreatorId() == m->MsgerId() || u->MsgerId() == m->CreatorId()))
-	    u->OnMsgerDestroyed (m->MsgerId());	// this may mark u unused
-    m.destroy();
-    // Destroying does release the mrid slot; that must be done explicitly.
+	if (u.created() && u->MsgerId() != mid && (u->CreatorId() == mid || u->MsgerId() == mcrid))
+	    u->OnMsgerDestroyed (mid);	// this may mark u unused
+    // Destroying does not release the mrid slot; that must be done explicitly.
+    DEBUG_PRINTF ("Msger %hu deleted\n", mid);
 }
 
 void App::DeleteUnusedMsgers (void) noexcept
@@ -191,14 +208,8 @@ void App::MessageLoopOnce (void) noexcept
 void App::SwapQueues (void) noexcept
 {
     _inq.clear();		// input queue was processed on the last iteration
-    {
-	atomic_scope_lock qlock (s_outqLock);
-	_inq.swap (move(_outq));	// output queue now becomes the input queue
-    }
-    if (_inq.empty()) {
-	DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
-	SetFlag (f_Quitting);	// running out of packets is usually not what you want, but not exactly an error
-    }
+    atomic_scope_lock qlock (s_outqLock);
+    _inq.swap (move(_outq));	// output queue now becomes the input queue
 }
 
 void App::ProcessInputQueue (void) noexcept
@@ -273,8 +284,10 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
     auto npfd = 0u;
     PTimer::mstime_t nearest = PTimer::TIMER_MAX;
     for (auto t : _timers) {
+	if (t->Cmd() == PTimer::WATCH_STOP)
+	    continue;
 	nearest = min (nearest, t->NextFire());
-	if (t->Fd() >= 0 && t->Cmd() != PTimer::WATCH_STOP) {
+	if (t->Fd() >= 0) {
 	    if (npfd >= pfdsz)
 		break;
 	    pfd[npfd].fd = t->Fd();
@@ -282,7 +295,7 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
 	    pfd[npfd++].revents = 0;
 	}
     }
-    if (_outq.empty())
+    if (!_outq.empty())
 	timeout = 0;	// do not wait if there are messages to process
     else if (nearest == PTimer::TIMER_MAX)	// wait indefinitely
 	timeout = -!!npfd;	// if no fds, then don't wait at all

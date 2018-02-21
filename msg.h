@@ -34,9 +34,17 @@ using iid_t = const char*;
 //
 using methodid_t = const char*;
 
+// Methods are preceded by indexes to interface and next method
+static inline constexpr auto MethodInterfaceOffset (methodid_t mid)
+    { return uint8_t(mid[-1]); }
+static inline constexpr auto MethodNextOffset (methodid_t mid)
+    { return uint8_t(mid[-2]); }
+
 // Interface name and methods are packed together for easy lookup
 static inline constexpr iid_t InterfaceOfMethod (methodid_t __restrict__ mid)
-    { return mid-mid[-1]; }
+    { return mid-MethodInterfaceOffset(mid); }
+static inline constexpr auto InterfaceNameSize (iid_t iid)
+    { return uint8_t(iid[-1]); }
 
 // Signatures immediately follow the method in the pack
 static inline const char* SignatureOfMethod (methodid_t __restrict__ mid)
@@ -99,7 +107,7 @@ public:					\
 //}}}-------------------------------------------------------------------
 //{{{ Msg
 
-class Msg {
+class alignas(16) Msg {
 public:
     struct Link {
 	mrid_t	src;
@@ -107,13 +115,14 @@ public:
     };
     using fdoffset_t = uint8_t;
     enum {
-	NO_FD_IN_MESSAGE = numeric_limits<fdoffset_t>::max(),
-	MESSAGE_HEADER_ALIGNMENT = 8,
-	MESSAGE_BODY_ALIGNMENT = MESSAGE_HEADER_ALIGNMENT,
-	MESSAGE_FD_ALIGNMENT = alignof(int)
+	NO_FD_INCLUDED = numeric_limits<fdoffset_t>::max(),
+	HEADER_ALIGNMENT = 8,
+	BODY_ALIGNMENT = HEADER_ALIGNMENT,
+	FD_ALIGNMENT = alignof(int)
     };
 public:
-			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NO_FD_IN_MESSAGE);
+			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NO_FD_INCLUDED) noexcept;
+			Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid = 0, fdoffset_t fdo = NO_FD_INCLUDED) noexcept;
     inline auto&	GetLink (void) const	{ return _link; }
     inline auto		Src (void) const	{ return GetLink().src; }
     inline auto		Dest (void) const	{ return GetLink().dest; }
@@ -122,10 +131,14 @@ public:
     inline auto		Interface (void) const	{ return InterfaceOfMethod (Method()); }
     inline auto		Signature (void) const	{ return SignatureOfMethod (Method()); }
     inline auto		Extid (void) const	{ return _extid; }
+    inline void		SetExtid (mrid_t eid)	{ _extid = eid; }
     inline auto		FdOffset (void) const	{ return _fdoffset; }
+    inline auto&&	MoveBody (void)		{ return move(_body); }
     inline istream	Read (void) const	{ return istream (_body); }
     inline ostream	Write (void)		{ return ostream (_body); }
-    streamsize		Verify (void) const noexcept;
+    static streamsize	ValidateSignature (istream& is, const char* sig) noexcept;
+    streamsize		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
+			Msg (Msg&& msg, const Link& l) : Msg(l,msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
 private:
     methodid_t		_method;
     Link		_link;
@@ -142,16 +155,20 @@ public:
     constexpr auto&	Link (void) const			{ return _link; }
     constexpr auto	Src (void) const			{ return Link().src; }
     constexpr auto	Dest (void) const			{ return Link().dest; }
+    void		CreateDestAs (iid_t iid) noexcept;
+    void		FreeId (void) noexcept;
 protected:
     constexpr		ProxyB (mrid_t from, mrid_t to)		: _link {from,to} {}
 			ProxyB (const ProxyB&) = delete;
     void		operator= (const ProxyB&) = delete;
     Msg&		CreateMsg (methodid_t imethod, streamsize sz) noexcept;
+    void		Forward (Msg&& msg) noexcept;
 #ifdef NDEBUG	// CommitMsg only does debug checking
     void		CommitMsg (Msg&, ostream&) noexcept	{ }
 #else
     void		CommitMsg (Msg& msg, ostream& os) noexcept;
 #endif
+    inline void		Send (methodid_t imethod)		{ CreateMsg (imethod, 0); }
     template <typename... Args>
     inline void Send (methodid_t imethod, const Args&... args) {
 	auto& msg = CreateMsg (imethod, variadic_stream_size(args...));
@@ -185,7 +202,8 @@ public:
     auto		MsgerId (void) const		{ return CreatorLink().dest; }
     auto		Flag (unsigned f) const		{ return GetBit(_flags,f); }
     static void		Error (const char* fmt, ...) noexcept PRINTFARGS(1,2);
-    virtual bool	Dispatch (const Msg&) noexcept	{ return false; }
+    static void		ErrorLibc (const char* f) noexcept;
+    virtual bool	Dispatch (Msg&) noexcept	{ return false; }
     virtual bool	OnError (mrid_t, const string&) noexcept
 			    { SetFlag (f_Unused); return false; }
     virtual void	OnMsgerDestroyed (mrid_t mid) noexcept

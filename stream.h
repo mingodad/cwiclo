@@ -18,15 +18,16 @@ using streampos = streamsize;
 class istream {
 public:
     using const_pointer		= cmemlink::const_pointer;
+    using pointer		= const_pointer;
     enum { is_reading = true, is_writing = false, is_sizing = false };
 public:
-    inline constexpr		istream (const_pointer p, const_pointer e)	: _p(p),_e(e) {}
-    inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
+    inline constexpr		istream (pointer p, pointer e)	: _p(p),_e(e) {}
+    inline constexpr		istream (pointer p, streamsize sz)	: istream(p,p+sz) {}
     inline constexpr		istream (const cmemlink& m)			: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
-    template <typename T>
+    template <typename T = char>
     inline auto			ptr (void) const __restrict__		{ return reinterpret_cast<const T*>(_p); }
     inline void			skip (streamsize sz) __restrict__	{ seek (_p + sz); }
     inline void			unread (streamsize sz) __restrict__	{ seek (_p - sz); }
@@ -40,7 +41,7 @@ public:
 				}
     const char*			read_strz (void) {
 				    const char* __restrict__ v = ptr<char>();
-				    auto se = (const_pointer) memchr (v, 0, remaining());
+				    auto se = (pointer) memchr (v, 0, remaining());
 				    if (!se)
 					return nullptr;
 				    seek (se+1);
@@ -57,11 +58,11 @@ public:
     template <typename T>
     inline istream&		operator>> (T& v);
 protected:
-    inline void			seek (const_pointer p) __restrict__		{ assert(p <= end()); _p = p; }
-    inline const_pointer	alignptr (streamsize g) const __restrict__	{ return const_pointer (Align (uintptr_t(_p), g)); }
+    inline void			seek (pointer p) __restrict__			{ assert(p <= end()); _p = p; }
+    inline pointer		alignptr (streamsize g) const __restrict__	{ return pointer (Align (uintptr_t(_p), g)); }
 private:
-    const_pointer		_p;
-    const const_pointer		_e;
+    pointer			_p;
+    const pointer		_e;
 };
 
 //}}}-------------------------------------------------------------------
@@ -79,20 +80,19 @@ public:
     inline constexpr		ostream (const ostream& os) = default;
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
-    template <typename T>
+    template <typename T = char>
     inline T*			ptr (void) __restrict__	{ return reinterpret_cast<T*>(_p); }
     inline void			skip (streamsize sz) __restrict__ {
 				    pointer __restrict__ p = _p;
-				    for (auto i = 0u; i < sz; ++i) {
-					assert (p+1 < end());
+				    assert (p+sz <= end());
+				    for (auto i = 0u; i < sz; ++i)
 					*p++ = 0;
-				    }
 				    _p = p;
 				}
     inline void			align (streamsize g) __restrict__ {
 				    pointer __restrict__ p = _p;
 				    while (uintptr_t(p) % g) {
-					assert (p+1 < end());
+					assert (p+1 <= end());
 					*p++ = 0;
 				    }
 				    _p = p;

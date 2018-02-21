@@ -87,7 +87,7 @@ public:
     }
 };
 
-#define LOG(...)	{printf(__VA_ARGS__);fflush(stdout);}
+#define LOG(...)	do {printf(__VA_ARGS__);fflush(stdout);} while(false)
 
 //----------------------------------------------------------------------
 // Finally, a server object must be defined that will implement the
@@ -104,7 +104,7 @@ public:
 			    LOG ("Ping%hu: %u, %u total\n", MsgerId(), v, ++_nPings);
 			    _reply.Ping (v);
 			}
-    virtual bool	Dispatch (const Msg& msg) noexcept override {
+    virtual bool	Dispatch (Msg& msg) noexcept override {
 			    return PPing::Dispatch (this, msg)
 					|| Msger::Dispatch (msg);
 			}

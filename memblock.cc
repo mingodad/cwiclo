@@ -11,28 +11,39 @@ namespace cwiclo {
 /// Reads the object from stream \p s
 void cmemlink::link_read (istream& is, size_type elsize) noexcept
 {
+    assert (!capacity() && "allocated memory in cmemlink; deallocate or unlink first");
     size_type n; is >> n; n *= elsize;
     auto nskip = Align (n, stream_align<size_type>::value);
-    if (zero_terminated() && n)
-	--n;
     if (is.remaining() < nskip)
 	return;	// errors should have been reported by the message validator
-    assert (!capacity() && "allocated memory in cmemlink; deallocate or unlink first");
-    link (is.ptr<value_type>(), n);
+    auto p = is.ptr<value_type>();
     is.skip (nskip);
+    if (zero_terminated()) {
+	if (!n)
+	    --p;	// point to the end of n, which is zero
+	else
+	    --n;	// clip the zero from size
+    }
+    link (p, n);
 }
 
 void cmemlink::write (ostream& os, size_type elsize) const noexcept
 {
-    auto sz = size(); sz /= elsize; os << sz;
-    os.write (data(), size());
+    auto sz = size();
+    if (sz)
+	sz += zero_terminated();
+    os << size_type(sz/elsize);
+    os.write (data(), sz);
     os.align (stream_align<size_type>::value);
 }
 
 void cmemlink::write (sstream& os, size_type elsize) const noexcept
 {
-    auto sz = size(); sz /= elsize; os << sz;
-    os.write (data(), size());
+    auto sz = size();
+    if (sz)
+	sz += zero_terminated();
+    os << size_type(sz/elsize);
+    os.write (data(), sz);
     os.align (stream_align<size_type>::value);
 }
 
@@ -133,12 +144,12 @@ void memblock::read (istream& is, size_type elsize) noexcept
 {
     size_type n; is >> n; n *= elsize;
     auto nskip = Align (n, stream_align<size_type>::value);
-    if (zero_terminated() && n)
-	--n;
     if (is.remaining() < nskip)
 	return;	// errors should have been reported by the message validator
-    resize (n);
-    assert (capacity() >= nskip && "resize allocates pow2-sized blocks and end will always be at least 4-grain");
+    if (zero_terminated() && n)
+	--n;
+    reserve (nskip);
+    memlink::resize (n);
     is.read (data(), nskip);
 }
 
