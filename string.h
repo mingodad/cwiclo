@@ -98,10 +98,88 @@ public:
     inline auto		rfind (const string& s) const				{ return rfind (s, end()); }
     inline auto		rfind (const_reference c, const_iterator fi) const	{ return const_iterator (memrchr (begin(), c, fi-begin())); }
     inline auto		rfind (const_reference c) const				{ return rfind (c, end()); }
+
+    inline auto		rfind (const_pointer s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s,fi)); }
+    inline auto		rfind (const string& s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s,fi)); }
+    inline auto		rfind (const_pointer s)					{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s)); }
+    inline auto		rfind (const string& s)					{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s)); }
+    inline auto		rfind (const_reference c, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(c,fi)); }
+    inline auto		rfind (const_reference c)				{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(c)); }
+
     auto		find_first_of (const_pointer s) const noexcept		{ auto rsz = strcspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
     inline auto		find_first_of (const string& s) const			{ return find_first_of (s.c_str()); }
     auto		find_first_not_of (const_pointer s) const noexcept	{ auto rsz = strspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
     inline auto		find_first_not_of (const string& s) const		{ return find_first_not_of (s.c_str()); }
+
+    inline auto		find_first_of (const_pointer s)				{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_of(s)); }
+    inline auto		find_first_of (const string& s)				{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_of(s)); }
+    inline auto		find_first_not_of (const_pointer s)			{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_not_of(s)); }
+    inline auto		find_first_not_of (const string& s)			{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_not_of(s)); }
+};
+
+//----------------------------------------------------------------------
+
+class lstring : public cmemlink {
+public:
+    constexpr		lstring (void)					: cmemlink (const_pointer(nullptr), 0, true) {}
+    constexpr		lstring (const_pointer s, size_type len)	: cmemlink (s, len) {}
+    constexpr		lstring (const_pointer s1, const_pointer s2)	: lstring (s1, s2-s1) {}
+    inline		lstring (const_pointer s)			: lstring (s, strlen(s)) {}
+    inline		lstring (lstring&& s)				: cmemlink (move(s)) {}
+    constexpr		lstring (const lstring& s)			: cmemlink (s) {}
+    inline		lstring (const string& s)			: cmemlink (s) {}
+    inline void		swap (lstring&& s)				{ cmemlink::swap (move(s)); }
+    inline auto&	operator= (const string& s)			{ cmemlink::operator= (s); return *this; }
+    inline auto&	operator= (lstring&& s)				{ cmemlink::operator= (move(s)); return *this; }
+
+    inline auto&	str (void) const				{ return reinterpret_cast<const string&>(*this); }
+    inline		operator const string& (void) const		{ return str(); }
+
+    constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
+    constexpr auto&	back (void) const				{ return at(size()-1); }
+
+    inline static int	compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2)
+									{ return string::compare (f1,l1,f2,l2); }
+    inline auto		compare (const lstring& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
+    inline auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
+    inline auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
+
+    inline bool		operator== (const string& s) const		{ return str() == s; }
+    inline bool		operator== (const_pointer s) const		{ return str() == s; }
+    inline bool		operator== (const_reference c) const		{ return str() == c; }
+    inline bool		operator!= (const string& s) const		{ return str() != s; }
+    inline bool		operator!= (const_pointer s) const		{ return str() != s; }
+    inline bool		operator!= (const_reference c) const		{ return str() != c; }
+    inline bool		operator< (const string& s) const		{ return str() < s; }
+    inline bool		operator< (const_pointer s) const		{ return str() < s; }
+    inline bool		operator< (const_reference c) const		{ return str() < c; }
+    inline bool		operator> (const string& s) const		{ return str() > s; }
+    inline bool		operator> (const_pointer s) const		{ return str() > s; }
+    inline bool		operator> (const_reference c) const		{ return str() > c; }
+    inline bool		operator<= (const_pointer s) const		{ return str() <= s; }
+    inline bool		operator>= (const_pointer s) const		{ return str() >= s; }
+
+    inline auto		find (const_pointer s, const_iterator fi) const		{ return str().find (s, fi); }
+    inline auto		find (const string& s, const_iterator fi) const		{ return str().find (s, fi); }
+    inline auto		find (const_pointer s) const				{ return str().find (s); }
+    inline auto		find (const string& s) const				{ return str().find (s); }
+    inline auto		find (const_reference c, const_iterator fi) const	{ return str().find (c, fi); }
+    inline auto		find (const_reference c) const				{ return str().find (c); }
+
+    inline auto		rfind (const_pointer s, const_iterator fi) const	{ return str().rfind (s, fi); }
+    inline auto		rfind (const string& s, const_iterator fi) const	{ return str().rfind (s, fi); }
+    inline auto		rfind (const_pointer s) const				{ return str().rfind (s); }
+    inline auto		rfind (const string& s) const				{ return str().rfind (s); }
+    inline auto		rfind (const_reference c, const_iterator fi) const	{ return str().rfind (c, fi); }
+    inline auto		rfind (const_reference c) const				{ return str().rfind (c); }
+
+    inline auto		find_first_of (const_pointer s) const			{ return str().find_first_of (s); }
+    inline auto		find_first_of (const string& s) const			{ return str().find_first_of (s); }
+    inline auto		find_first_not_of (const_pointer s) const		{ return str().find_first_not_of (s); }
+    inline auto		find_first_not_of (const string& s) const		{ return str().find_first_not_of (s); }
+
+    void		resize (size_type sz) = delete;
+    void		clear (void) = delete;
 };
 
 } // namespace cwiclo

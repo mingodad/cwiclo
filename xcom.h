@@ -30,12 +30,12 @@ public:
     static bool	Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Error()) {
 	    auto is = msg.Read();
-	    string s; is >> s;
-	    o->COM_Error (move(s));
+	    lstring s; is >> s;
+	    o->COM_Error (s);
 	} else if (msg.Method() == M_Export()) {
 	    auto is = msg.Read();
 	    string s; is >> s;
-	    o->COM_Export (move(s));
+	    o->COM_Export (s);
 	} else if (msg.Method() == M_Delete())
 	    o->COM_Delete ();
 	else
@@ -178,7 +178,7 @@ public:
     inline void		Extern_Open (int fd, const iid_t* eifaces, bool isServer) noexcept;
     void		Extern_Close (void) noexcept;
     inline void		COM_Error (const string& errmsg) noexcept;
-    inline void		COM_Export (string elist) noexcept;
+    inline void		COM_Export (string& elist) noexcept;
     inline void		COM_Delete (void) noexcept;
     void		TimerR_Timer (int fd) noexcept;
 private:

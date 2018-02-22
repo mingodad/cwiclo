@@ -47,8 +47,8 @@ public:
     inline constexpr auto	cend (void) const			{ return end(); }
     inline constexpr auto	iat (size_type i) const			{ assert (i <= size()); return begin() + i; }
     inline constexpr auto	ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
-    inline auto&		at (size_type i) const			{ assert (i < size()); return begin()[i]; }
-    inline auto&		operator[] (size_type i) const		{ return at (i); }
+    inline constexpr auto&	at (size_type i) const			{ assert (i < size()); return begin()[i]; }
+    inline constexpr auto&	operator[] (size_type i) const		{ return at (i); }
     inline bool			operator== (const cmemlink& v) const	{ return size() == v.size() && 0 == memcmp (data(), v.data(), size()); }
     inline void			link (pointer p, size_type n)		{ _data = p; _size = n; }
     inline void			link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
