@@ -87,9 +87,16 @@ public:
     inline auto&		emplace_back (Args&&... args)			{ return *emplace(end(), forward<Args>(args)...); }
     auto			erase (const_iterator ep, size_type n = 1) noexcept;
     inline auto			erase (const_iterator ep1, const_iterator ep2)	{ assert (ep1 <= ep2); return erase (ep1, ep2 - ep1); }
+    auto			replace (const_iterator rp1, const_iterator rp2, const_iterator i1, const_iterator i2)
+									{ return insert (erase (rp1, rp2), i1, i2); }
     inline auto&		push_back (const T& v)			{ return emplace_back (v); }
     inline auto&		push_back (T&& v)			{ return emplace_back (move(v)); }
     inline auto&		push_back (void)			{ return emplace_back(); }
+    inline auto			append (const T& v)			{ return push_back(v); }
+    inline auto			append (T&& v)				{ return push_back(move(v)); }
+    inline auto			append (const_iterator i1, const_iterator i2)	{ return insert (end(), i1, i2); }
+    inline auto			append (size_type n, const T& v)	{ return insert (end(), n, v); }
+    inline auto			append (initlist_t v)			{ return append (v.begin(), v.end()); }
     inline void			pop_back (void)				{ destroy_at (end()-1); _data.memlink::resize (_data.size() - sizeof(T)); }
     inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
     inline bool			is_linked (void) const			{ return !_data.capacity(); }
@@ -102,7 +109,8 @@ public:
     void			write (ostream& os) const noexcept;
     inline void			write (sstream& os) const noexcept;
 protected:
-    inline auto			insert_hole (const_iterator ip, size_type n)	{ return iterator (_data.insert (memblock::const_iterator(ip), n*sizeof(T))); }
+    inline auto			insert_hole (const_iterator ip, size_type n)
+				    { return iterator (_data.insert (memblock::const_iterator(ip), n*sizeof(T))); }
 private:
     memblock			_data;	///< Raw element data, consecutively stored.
 };

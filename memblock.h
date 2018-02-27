@@ -126,7 +126,11 @@ public:
     inline void			clear (void)				{ resize(0); }
     inline void			copy_link (void) noexcept		{ resize (size()); }
     iterator			insert (const_iterator start, size_type n) noexcept;
+    auto			insert (const_iterator ip, const_pointer s, size_type n)
+				    { return copy_n (s, n, insert (ip, n)); }
+    void		   	append (const_pointer s, size_type n)	{ insert (end(), s, n); }
     iterator			erase (const_iterator start, size_type n) noexcept;
+    void			replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept;
     void			shrink_to_fit (void) noexcept;
     void			deallocate (void) noexcept;
     void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;

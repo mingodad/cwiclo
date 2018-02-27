@@ -11,6 +11,10 @@ namespace cwiclo {
 class string : public memblock {
 public:
 			using memblock::memblock;
+			using memblock::insert;
+			using memblock::assign;
+			using memblock::append;
+			using memblock::replace;
     inline		string (void)					: memblock (pointer(nullptr), 0, true) {}
     inline		string (const_pointer s1, const_pointer s2)	: string() { assert (s1<=s2); assign (s1, s2-s1); }
     inline		string (const_pointer s, size_type len)		: string() { assign (s, len); }
@@ -22,19 +26,16 @@ public:
     inline auto&	back (void)					{ return at(size()-1); }
     inline void		push_back (const_reference c)			{ resize(size()+1); back() = c; }
     auto		insert (const_iterator ip, const_reference c, size_type n =1)	{ return fill_n (memblock::insert (ip, n), n, c); }
-    auto		insert (const_iterator ip, const_pointer s, size_type n)	{ return copy_n (s, n, memblock::insert (ip, n)); }
     inline auto		insert (const_iterator ip, const string& s)			{ return insert (ip, s.c_str(), s.size()); }
     inline auto		insert (const_iterator ip, const_pointer s)			{ return insert (ip, s, strlen(s)); }
     inline auto		insert (const_iterator ip, const_pointer f, const_iterator l)	{ return insert (ip, f, l-f); }
     int			insertv (const_iterator ip, const char* fmt, va_list args) noexcept;
     int			insertf (const_iterator ip, const char* fmt, ...) noexcept PRINTFARGS(3,4);
-    inline void	   	append (const_pointer s, size_type n)		{ insert (end(), s, n); }
     inline void	   	append (const_pointer s)			{ append (s, strlen(s)); }
     inline void		append (const string& s)			{ append (s.begin(), s.size()); }
     inline void		append (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); append (i1, i2-i1); }
     int			appendv (const char* fmt, va_list args) noexcept;
     int			appendf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
-    inline void	    	assign (const_pointer s, size_type len)		{ memblock::assign (s, len); }
     inline void	    	assign (const_pointer s)			{ assign (s, strlen(s)); }
     inline void		assign (const string& s)			{ assign (s.begin(), s.size()); }
     inline void		assign (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); assign (i1, i2-i1); }
@@ -72,7 +73,7 @@ public:
     inline void		pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
     inline void		clear (void)					{ assert (capacity() && "modifying a const linked string"); memlink::resize (0); *end() = 0; }
 
-    void		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen) noexcept;
+    inline void		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ memblock::replace (f, l-f, s, slen); }
     inline void		replace (const_iterator f, const_iterator l, const_pointer s)			{ replace (f, l, s, strlen(s)); }
     inline void		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ replace (f, l, i1, i2-i1); }
     inline void		replace (const_iterator f, const_iterator l, const string& s)			{ replace (f, l, s.begin(), s.end()); }

@@ -79,16 +79,6 @@ bool string::operator== (const_pointer s) const noexcept
     return strlen(s) == size() && 0 == strcmp (c_str(), s);
 }
 
-void string::replace (const_iterator f, const_iterator l, const_pointer s, size_type slen) noexcept
-{
-    auto dsz = difference_type(slen) - (l-f);
-    if (dsz > 0)
-	f = memblock::insert (f, dsz);
-    else
-	f = memblock::erase (f, -dsz);
-    memcpy (const_cast<pointer>(f), s, slen);
-}
-
 void string::replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept
 {
     auto dsz = difference_type(n) - (l-f);

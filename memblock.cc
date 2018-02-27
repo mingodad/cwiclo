@@ -139,6 +139,13 @@ auto memblock::erase (const_iterator start, size_type n) noexcept -> iterator
     return iat (ep);
 }
 
+void memblock::replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept
+{
+    auto dsz = difference_type(sn) - ipn;
+    auto ipw = (dsz > 0 ? insert (ip, dsz) : erase (ip, -dsz));
+    memcpy (ipw, s, sn);
+}
+
 /// Reads the object from stream \p s
 void memblock::read (istream& is, size_type elsize) noexcept
 {
