@@ -339,13 +339,13 @@ methodid_t Extern::ExtMsg::ParseMethod (void) const noexcept
 {
     streamsize ssz = _h.hsz-sizeof(_h);
     auto ifacename = _hbuf;
-    auto methodname = strnext_r (ifacename, &ssz);
+    auto methodname = strnext_r (ifacename, ssz);
     if (!ssz)
 	return nullptr;
-    auto signame = strnext_r (methodname, &ssz);
+    auto signame = strnext_r (methodname, ssz);
     if (!ssz)
 	return nullptr;
-    auto methodend = strnext_r (signame, &ssz);
+    auto methodend = strnext_r (signame, ssz);
     auto methodnamesz = methodend - methodname;
     auto iface = App::InterfaceByName (ifacename, distance(ifacename,methodname));
     if (!iface)

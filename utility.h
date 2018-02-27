@@ -88,18 +88,18 @@ template <typename T, size_t N> constexpr inline auto ArrayEnd (T(&a)[N])
 #define eachfor(i,ctr)	for (auto i = (ctr).end(); i-- > (ctr).begin();)
 
 /// Returns s+strlen(s)+1
-static inline NONNULL() const char* strnext_r (const char* s, unsigned* n)
+static inline NONNULL() const char* strnext_r (const char* s, unsigned& n)
 {
 #if __x86__
     if (!compile_constant(strlen(s)))
-	asm ("repnz\tscasb":"+D"(s),"+c"(*n):"a"(0):"memory");
+	asm ("repnz\tscasb":"+D"(s),"+c"(n):"a"(0):"memory");
     else
 #endif
-    { auto l = strnlen(s, *n)+1; s += l; *n -= l; }
+    { auto l = strnlen(s, n); l += !!l; s += l; n -= l; }
     return s;
 }
 static inline NONNULL() const char* strnext (const char* s)
-    { unsigned n = UINT_MAX; return strnext_r(s,&n); }
+    { unsigned n = UINT_MAX; return strnext_r(s,n); }
 
 template <typename T> inline constexpr auto advance (T* p, ptrdiff_t n) { return p + n; }
 template <> inline auto advance (void* p, ptrdiff_t n) { return advance ((char*)p, n); }
