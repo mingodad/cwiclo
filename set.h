@@ -24,6 +24,7 @@ public:
     using typename vecbase::initlist_t;
 public:
 			using vecbase::vector;
+			using vecbase::insert;
     inline		set (const set& v)	: vecbase(v) {}
     inline		set (const vecbase& v)	: vecbase(v) { sort(*this); }
     template <size_type N>
@@ -43,12 +44,18 @@ public:
     inline auto&	operator= (set&& v)		{ assign (move(v)); return *this; }
     inline auto&	operator= (vecbase&& v)		{ assign (move(v)); return *this; }
     inline auto&	operator= (initlist_t v)	{ assign (v); return *this; }
-    inline auto		find (const_reference v) const		{ return binary_search (this->begin(), this->end(), v); }
-    inline auto		lower_bound (const_reference v) const	{ return ::cwiclo::lower_bound (this->begin(), this->end(), v); }
-    inline auto		upper_bound (const_reference v) const	{ return ::cwiclo::upper_bound (this->begin(), this->end(), v); }
-    inline auto		find (const_reference v)		{ return const_cast<iterator>(const_cast<const set&>(*this).find (v)); }
-    inline auto		lower_bound (const_reference v)		{ return const_cast<iterator>(const_cast<const set&>(*this).lower_bound (v)); }
-    inline auto		upper_bound (const_reference v)		{ return const_cast<iterator>(const_cast<const set&>(*this).upper_bound (v)); }
+    template <typename U>
+    inline auto		find (const U& v) const		{ return binary_search (this->begin(), this->end(), v); }
+    template <typename U>
+    inline auto		lower_bound (const U& v) const	{ return ::cwiclo::lower_bound (this->begin(), this->end(), v); }
+    template <typename U>
+    inline auto		upper_bound (const U& v) const	{ return ::cwiclo::upper_bound (this->begin(), this->end(), v); }
+    template <typename U>
+    inline auto		find (const U& v)		{ return const_cast<iterator>(const_cast<const set&>(*this).find (v)); }
+    template <typename U>
+    inline auto		lower_bound (const U& v)	{ return const_cast<iterator>(const_cast<const set&>(*this).lower_bound (v)); }
+    template <typename U>
+    inline auto		upper_bound (const U& v)	{ return const_cast<iterator>(const_cast<const set&>(*this).upper_bound (v)); }
     auto		insert (const_reference v) noexcept;
     auto		insert (T&& v) noexcept;
     inline void		insert (const_iterator i1, const_iterator i2)	{ for (; i1 < i2; ++i1) insert (*i1); }

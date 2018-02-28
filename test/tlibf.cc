@@ -228,6 +228,17 @@ void LibTestApp::TestSet (void) // static
     printf ("erase(3):\t");
     v.erase (3);
     PrintVector (v);
+    auto f = v.find (7);
+    if (f)
+	printf ("7 found at %ld\n", distance(v.begin(),f));
+    f = v.find (6);
+    if (f)
+	printf ("6 found at %ld\n", distance(v.begin(),f));
+    printf ("lower_bound(4) at %ld\n", distance(v.begin(),v.lower_bound (4)));
+    printf ("upper_bound(4) at %ld\n", distance(v.begin(),v.upper_bound (4)));
+    printf ("lower_bound(5) at %ld\n", distance(v.begin(),v.lower_bound (5)));
+    v.insert (v.lower_bound(5), 5);
+    PrintVector (v);
 }
 
 //}}}-------------------------------------------------------------------
