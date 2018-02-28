@@ -191,7 +191,7 @@ template <typename T>
 inline constexpr auto stream_align_of (const T&) { return stream_align<T>::value; }
 
 #define STREAM_ALIGN(type,grain)	\
-    template <> struct stream_align<type> { static constexpr const streamsize value = grain; }
+    namespace cwiclo { template <> struct stream_align<type> { static constexpr const streamsize value = grain; };}
 
 //}}}-------------------------------------------------------------------
 //{{{ Variadic serialization
