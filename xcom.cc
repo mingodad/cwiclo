@@ -430,7 +430,7 @@ void Extern::COM_Error (const string& errmsg) noexcept
     Error (errmsg.c_str());	// report it on this side
 }
 
-void Extern::COM_Export (string& elist) noexcept
+void Extern::COM_Export (string&& elist) noexcept
 {
     // Other side of the socket listing exported interfaces as a comma-separated list
     _einfo.imported.clear();

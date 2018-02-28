@@ -48,15 +48,17 @@ public:
 				    return v;
 				}
     template <typename T>
-    inline auto&		readv (void) __restrict__ {
+    inline auto&		read_trivial (void) __restrict__ {
 				    const T* __restrict__ p = ptr<T>();
 				    skip(sizeof(T));
 				    return *p;
 				}
     template <typename T>
-    inline void			readv (T& v) __restrict__ { v = readv<T>(); }
+    inline void			read_trivial (T& v) __restrict__ { v = read_trivial<T>(); }
     template <typename T>
     inline istream&		operator>> (T& v);
+    template <typename T>
+    inline decltype(auto)	readv (void) __restrict__;
 protected:
     inline void			seek (pointer p) __restrict__			{ assert(p <= end()); _p = p; }
     inline pointer		alignptr (streamsize g) const __restrict__	{ return pointer (Align (uintptr_t(_p), g)); }
@@ -106,7 +108,7 @@ public:
 				}
     inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>
-    inline void			writev (const T& v) __restrict__ {
+    inline void			write_trivial (const T& v) __restrict__ {
 				    assert(remaining() >= sizeof(T));
 				    T* __restrict__ p = ptr<T>(); *p = v;
 				    _p += sizeof(T);
@@ -141,7 +143,7 @@ public:
     inline void			write (const void*, streamsize sz) { skip (sz); }
     inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>
-    inline void			writev (const T& v)	{ write (&v, sizeof(v)); }
+    inline void			write_trivial (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
     inline sstream&		operator<< (const T& v);
 private:
@@ -154,14 +156,16 @@ private:
 template <typename T, bool Trivial>
 struct type_streaming {
     static inline void read (istream& is, T& v) { v.read (is); }
+    static inline auto readv (istream& is) { T v; v.read (is); return v; }
     static inline void write (ostream& os, const T& v) { v.write (os); }
     static inline void size (sstream& ss, const T& v) { v.write (ss); }
 };
 template <typename T>
 struct type_streaming<T,true> {
-    static inline void read (istream& is, T& v) { is.readv(v); }
-    static inline void write (ostream& os, const T& v) { os.writev(v); }
-    static inline void size (sstream& ss, const T& v) { ss.writev(v); }
+    static inline void read (istream& is, T& v) { is.read_trivial(v); }
+    static inline auto& readv (istream& is) { return is.read_trivial<T>(); }
+    static inline void write (ostream& os, const T& v) { os.write_trivial(v); }
+    static inline void size (sstream& ss, const T& v) { ss.write_trivial(v); }
 };
 template <typename T>
 using type_streaming_t = type_streaming<remove_reference_t<T>,is_trivial<remove_reference_t<T>>::value>;
@@ -169,6 +173,9 @@ using type_streaming_t = type_streaming<remove_reference_t<T>,is_trivial<remove_
 template <typename T>
 istream& istream::operator>> (T& v)
     { type_streaming_t<T>::read (*this, v); return *this; }
+template <typename T>
+decltype(auto) istream::readv (void) __restrict__
+    { return type_streaming_t<T>::readv (*this); }
 template <typename T>
 ostream& ostream::operator<< (const T& v)
     { type_streaming_t<T>::write (*this, v); return *this; }

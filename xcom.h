@@ -28,15 +28,11 @@ public:
     static Msg	DeleteMsg (mrid_t extid) noexcept	{ return Msg (Msg::Link{}, PCOM::M_Delete(), 0, extid); }
     template <typename O>
     static bool	Dispatch (O* o, const Msg& msg) noexcept {
-	if (msg.Method() == M_Error()) {
-	    auto is = msg.Read();
-	    lstring s; is >> s;
-	    o->COM_Error (s);
-	} else if (msg.Method() == M_Export()) {
-	    auto is = msg.Read();
-	    string s; is >> s;
-	    o->COM_Export (s);
-	} else if (msg.Method() == M_Delete())
+	if (msg.Method() == M_Error())
+	    o->COM_Error (msg.Read().readv<lstring>());
+	else if (msg.Method() == M_Export())
+	    o->COM_Export (msg.Read().readv<string>());
+	else if (msg.Method() == M_Delete())
 	    o->COM_Delete ();
 	else
 	    return false;
@@ -178,7 +174,7 @@ public:
     inline void		Extern_Open (int fd, const iid_t* eifaces, bool isServer) noexcept;
     void		Extern_Close (void) noexcept;
     inline void		COM_Error (const string& errmsg) noexcept;
-    inline void		COM_Export (string& elist) noexcept;
+    inline void		COM_Export (string&& elist) noexcept;
     inline void		COM_Delete (void) noexcept;
     void		TimerR_Timer (int fd) noexcept;
 private:
