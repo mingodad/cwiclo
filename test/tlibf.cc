@@ -5,7 +5,7 @@
 
 #include "../app.h"
 #include "../vector.h"
-#include "../set.h"
+#include "../multiset.h"
 #include "../string.h"
 #include "../stream.h"
 #include <ctype.h>
@@ -23,7 +23,7 @@ private:
     static void		TestML (void);
     static void		TestMB (void);
     static void		TestVector (void);
-    static void		TestSet (void);
+    static void		TestMultiset (void);
     static void		TestString (void);
     static void		TestStringVector (void);
     static void		TestStreams (void);
@@ -217,13 +217,13 @@ void LibTestApp::TestVector (void) // static
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ TestSet
+//{{{ TestMultiset
 
-void LibTestApp::TestSet (void) // static
+void LibTestApp::TestMultiset (void) // static
 {
-    set<int> v {1, 8, 9, 2, 3, 1, 1};
+    multiset<int> v {1, 8, 9, 2, 3, 1, 1};
     v.insert ({4, 6, 1, 3, 4});
-    printf ("set:\t\t");
+    printf ("multiset:\t");
     PrintVector (v);
     printf ("erase(3):\t");
     v.erase (3);
@@ -545,7 +545,7 @@ int LibTestApp::Run (void)
 	TestML,
 	TestMB,
 	TestVector,
-	TestSet,
+	TestMultiset,
 	TestString,
 	TestStringVector,
 	TestStreams

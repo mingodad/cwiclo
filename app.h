@@ -5,7 +5,6 @@
 
 #pragma once
 #include "msg.h"
-#include "set.h"
 #include <sys/poll.h>
 #include <syslog.h>
 
