@@ -63,6 +63,8 @@ public:
     inline void			read (istream& is, size_type elsize = sizeof(value_type))	{ link_read (is, elsize); }
     void			write (ostream& os, size_type elsize = sizeof(value_type)) const noexcept;
     void			write (sstream& os, size_type elsize = sizeof(value_type)) const noexcept;
+    int				write_file (const char* filename) const noexcept;
+    int				write_file_atomic (const char* filename) const noexcept;
 protected:
     inline constexpr auto&	dataw (void)				{ return _data; }
     inline constexpr bool	zero_terminated (void) const		{ return _zerot; }
@@ -134,6 +136,7 @@ public:
     void			shrink_to_fit (void) noexcept;
     void			deallocate (void) noexcept;
     void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
+    int				read_file (const char* filename) noexcept;
 };
 
 //----------------------------------------------------------------------

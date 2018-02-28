@@ -5,6 +5,8 @@
 
 #include "memblock.h"
 #include "stream.h"
+#include <fcntl.h>
+#include <sys/stat.h>
 
 namespace cwiclo {
 
@@ -45,6 +47,42 @@ void cmemlink::write (sstream& os, size_type elsize) const noexcept
     os << size_type(sz/elsize);
     os.write (data(), sz);
     os.align (stream_align<size_type>::value);
+}
+
+int cmemlink::write_file (const char* filename) const noexcept
+{
+    int fd = open (filename, O_WRONLY| O_TRUNC| O_CREAT| O_CLOEXEC);
+    if (fd < 0)
+	return -1;
+    int r = complete_write (fd, data(), size());
+    if (0 > close (fd))
+	return -1;
+    return r;
+}
+
+// Write to a temp file, close it, and move it over filename.
+// This method ensures that filename will always be valid, with
+// incomplete or otherwise failed writes will end up in a temp file.
+//
+int cmemlink::write_file_atomic (const char* filename) const noexcept
+{
+    char tmpfilename [PATH_MAX];
+    snprintf (ArrayBlock(tmpfilename), "%s.XXXXXX", filename);
+
+    // Create the temp file
+    int ofd = mkstemp (tmpfilename);
+    if (ofd < 0)
+	return -1;
+
+    // Write the data, minding EINTR
+    auto bw = complete_write (ofd, data(), size());
+    if (0 > close (ofd))
+	return -1;
+
+    // If everything went well, can overwrite the old file
+    if (bw >= 0 && 0 > rename (tmpfilename, filename))
+	return -1;
+    return bw;
 }
 
 //----------------------------------------------------------------------
@@ -158,6 +196,19 @@ void memblock::read (istream& is, size_type elsize) noexcept
     reserve (nskip);
     memlink::resize (n);
     is.read (data(), nskip);
+}
+
+int memblock::read_file (const char* filename) noexcept
+{
+    int fd = open (filename, O_RDONLY);
+    if (fd < 0)
+	return -1;
+    auto autoclose = make_scope_exit ([&]{ close(fd); });
+    struct stat st;
+    if (0 > fstat (fd, &st))
+	return -1;
+    resize (st.st_size);
+    return complete_read (fd, data(), st.st_size);
 }
 
 } // namespace cwiclo

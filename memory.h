@@ -519,12 +519,5 @@ void remove_if (Container& ctr, Discriminator f)
 	    --(i = ctr.erase(i));
 }
 
-#ifndef UC_VERSION
-const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexcept;
-#endif
-
-enum { SD_LISTEN_FDS_START = STDERR_FILENO+1 };
-unsigned sd_listen_fds (void) noexcept;
-
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

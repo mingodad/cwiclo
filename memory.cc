@@ -5,6 +5,7 @@
 
 #include "memory.h"
 #include <alloca.h>
+#include <sys/stat.h>
 #if __has_include(<execinfo.h>)
     #include <execinfo.h>
 #endif
@@ -101,6 +102,8 @@ extern "C" void hexdump (const void* vp, size_t n) noexcept
     }
 }
 
+//----------------------------------------------------------------------
+
 const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexcept
 {
     if (efn[0] == '/' || (efn[0] == '.' && (efn[1] == '/' || efn[1] == '.'))) {
@@ -124,7 +127,6 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
     }
     return NULL;
 }
-#endif
 
 unsigned sd_listen_fds (void) noexcept
 {
@@ -134,5 +136,34 @@ unsigned sd_listen_fds (void) noexcept
     e = getenv("LISTEN_FDS");
     return e ? strtoul (e, NULL, 10) : 0;
 }
+
+int mkpath (const char* path, mode_t mode) noexcept
+{
+    char pbuf [PATH_MAX], *pbe = pbuf;
+    do {
+	if (*path == '/' || !*path) {
+	    *pbe = '\0';
+	    if (pbuf[0] && 0 > mkdir (pbuf, mode) && errno != EEXIST)
+		return -1;
+	}
+	*pbe++ = *path;
+    } while (*path++);
+    return 0;
+}
+
+int rmpath (const char* path) noexcept
+{
+    char pbuf [PATH_MAX];
+    for (char* pend = stpcpy (pbuf, path)-1;; *pend = 0) {
+	if (0 > rmdir(pbuf))
+	    return (errno == ENOTEMPTY || errno == EACCES) ? 0 : -1;
+	do {
+	    if (pend <= pbuf)
+		return 0;
+	} while (*--pend != '/');
+    }
+    return 0;
+}
+#endif // UC_VERSION
 
 } // namespace cwiclo
