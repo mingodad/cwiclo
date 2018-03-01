@@ -102,9 +102,9 @@ public:
     inline bool			is_linked (void) const			{ return !_data.capacity(); }
     inline void			unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void) noexcept;
-    inline void			link (const_pointer p, size_type n)	{ _data.link (p, n * sizeof(T)); }
+    inline void			link (const_pointer p, size_type n)	{ _data.link (memblock::const_pointer(p), n * sizeof(T)); }
     inline void			link (const vector& v)			{ _data.link (v); }
-    inline void			link (const_pointer first, const_pointer last)	{ _data.link (first, last); }
+    inline void			link (const_pointer f, const_pointer l)	{ link (f, l-f); }
     void			read (istream& is) noexcept;
     void			write (ostream& os) const noexcept;
     inline void			write (sstream& os) const noexcept;
