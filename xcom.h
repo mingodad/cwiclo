@@ -62,7 +62,7 @@ public:
     int		ConnectUserLocal (const char* sockname) noexcept;
     int		LaunchPipe (const char* exe, const char* arg) noexcept;
     template <typename O>
-    static bool	Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Open()) {
 	    auto is = msg.Read();
 	    auto eifaces = is.readv<const iid_t*>();
@@ -107,7 +107,7 @@ public:
     explicit	PExternR (const Msg::Link& l)		: ProxyR(l) {}
     void	Connected (const ExternInfo* einfo)	{ Send (M_Connected(), einfo); }
     template <typename O>
-    static bool	Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Connected())
 	    return false;
 	o->ExternR_Connected (msg.Read().readv<const ExternInfo*>());
@@ -286,7 +286,7 @@ public:
     int		BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
     int		BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
     template <typename O>
-    static bool	Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool	Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Open()) {
 	    auto is = msg.Read();
 	    auto eifaces = is.readv<const iid_t*>();

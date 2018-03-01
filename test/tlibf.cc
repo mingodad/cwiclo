@@ -36,6 +36,82 @@ private:
 };
 
 //}}}-------------------------------------------------------------------
+//{{{ TestUtility
+
+template <typename T>
+static void TestBswap (T v)
+{
+    auto vsw (bswap(v));
+    auto vbe (vsw), vle (v);
+    static const char ok[2][4] = { "bad", "ok" };
+    printf ("bswap(%lX) = %lX\n", (unsigned long) v, (unsigned long) vsw);
+    printf ("le_to_native(%lX) = %s\n", (unsigned long) v, ok[le_to_native(vle) == v]);
+    printf ("native_to_le(%lX) = %s\n", (unsigned long) v, ok[native_to_le(v) == vle]);
+    printf ("be_to_native(%lX) = %s\n", (unsigned long) v, ok[be_to_native(vbe) == v]);
+    printf ("native_to_be(%lX) = %s\n", (unsigned long) v, ok[native_to_be(v) == vbe]);
+}
+
+static void TestUtility (void)
+{
+    printf ("DivRU(13,5) = %d\n", DivRU(13,5));
+    printf ("DivRU(15,5) = %d\n", DivRU(15,5));
+    printf ("DivRU(-12,5) = %d\n\n", DivRU(-12,5));
+
+    printf ("Floor(18,8) = %d\n", Floor(18,8));
+    printf ("Floor(-26,25) = %d\n\n", Floor(-26,25));
+
+    printf ("Align(5) = %d\n", Align(5));
+    printf ("Align(5,2) = %d\n", Align(5,2));
+    printf ("Align(17,7) = %d\n", Align(17,7));
+    printf ("Align(14,7) = %d\n", Align(14,7));
+    printf ("Align(-26,25) = %d\n\n", Align(-26,25));
+
+    printf ("Round(5,2) = %d\n", Round(5,2));
+    printf ("Round(-5,2) = %d\n", Round(-5,2));
+    printf ("Round(14,7) = %d\n", Round(14,7));
+    printf ("Round(-1,7) = %d\n", Round(-1,7));
+    printf ("Round(-14,25) = %d\n\n", Round(-14,25));
+
+    printf ("DivRound(5,2) = %d\n", DivRound(5,2));
+    printf ("DivRound(-5,2) = %d\n", DivRound(-5,2));
+    printf ("DivRound(14,9) = %d\n", DivRound(14,9));
+    printf ("DivRound(-1,7) = %d\n\n", DivRound(-1,7));
+
+    printf ("Square(3) = %u\n", Square(3));
+    printf ("Square(-4) = %u\n\n", Square(-4));
+
+    printf ("NextPow2(0) = %d\n", NextPow2(0));
+    printf ("NextPow2(1) = %d\n", NextPow2(1));
+    printf ("NextPow2(4) = %d\n", NextPow2(4));
+    printf ("NextPow2(3827) = %d\n", NextPow2(3827));
+    printf ("NextPow2(0xFFFFFFF0) = %d\n\n", NextPow2(0xFFFFFFF0));
+
+    auto cvp = reinterpret_cast<const void*>(0x1234);
+    auto vp = reinterpret_cast<void*>(0x4321);
+    printf ("cvp = %lX\n", (uintptr_t) cvp);
+    printf ("vp = %lX\n", (uintptr_t) vp);
+    printf ("advance(cvp,5) = %lX\n", (uintptr_t) advance(cvp,5));
+    printf ("advance(vp,4) = %lX\n", (uintptr_t) advance(vp,4));
+    printf ("distance(cvp,vp) = %zX\n", distance(cvp,(const void*)vp));
+
+    const int32_t c_Numbers[] = { 1, 2, 3, 4, 5 };
+    printf ("ArraySize(c_Numbers[5]) = %zd\n", ArraySize(c_Numbers));
+
+    TestBswap (uint16_t (0x1234));
+    TestBswap (uint32_t (0x12345678));
+    TestBswap (uint64_t (UINT64_C(0x123456789ABCDEF0)));
+
+    printf ("\nabsv(12) = %u\n", absv(12));
+    printf ("absv(-12) = %u\n", absv(-12));
+    printf ("sign(12u) = %d\n", sign(12u));
+    printf ("sign(-12) = %d\n", sign(-12));
+    printf ("sign(0) = %d\n", sign(0));
+    printf ("min(3,4) = %d\n", min(3,4));
+    printf ("min(6u,1u) = %d\n", min(6u,1u));
+    printf ("max(-3,-6) = %d\n", max(-3,-6));
+    printf ("max(-3l,6l) = %ld\n", max(-3l,6l));
+}
+//}}}
 //{{{ TestML
 
 void LibTestApp::WriteML (const memlink& l) // static
@@ -542,6 +618,7 @@ int LibTestApp::Run (void)
 {
     using stdtestfunc_t	= void (*)(void);
     static const stdtestfunc_t c_Tests[] = {
+	TestUtility,
 	TestML,
 	TestMB,
 	TestVector,

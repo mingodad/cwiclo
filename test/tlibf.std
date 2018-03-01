@@ -1,4 +1,69 @@
 ######################################################################
+DivRU(13,5) = 3
+DivRU(15,5) = 3
+DivRU(-12,5) = -3
+
+Floor(18,8) = 16
+Floor(-26,25) = -25
+
+Align(5) = 8
+Align(5,2) = 6
+Align(17,7) = 21
+Align(14,7) = 14
+Align(-26,25) = -50
+
+Round(5,2) = 6
+Round(-5,2) = -6
+Round(14,7) = 14
+Round(-1,7) = 0
+Round(-14,25) = -25
+
+DivRound(5,2) = 3
+DivRound(-5,2) = -3
+DivRound(14,9) = 2
+DivRound(-1,7) = 0
+
+Square(3) = 9
+Square(-4) = 16
+
+NextPow2(0) = 1
+NextPow2(1) = 2
+NextPow2(4) = 4
+NextPow2(3827) = 4096
+NextPow2(0xFFFFFFF0) = 1
+
+cvp = 1234
+vp = 4321
+advance(cvp,5) = 1239
+advance(vp,4) = 4325
+distance(cvp,vp) = 30ED
+ArraySize(c_Numbers[5]) = 5
+bswap(1234) = 3412
+le_to_native(1234) = ok
+native_to_le(1234) = ok
+be_to_native(1234) = ok
+native_to_be(1234) = ok
+bswap(12345678) = 78563412
+le_to_native(12345678) = ok
+native_to_le(12345678) = ok
+be_to_native(12345678) = ok
+native_to_be(12345678) = ok
+bswap(123456789ABCDEF0) = F0DEBC9A78563412
+le_to_native(123456789ABCDEF0) = ok
+native_to_le(123456789ABCDEF0) = ok
+be_to_native(123456789ABCDEF0) = ok
+native_to_be(123456789ABCDEF0) = ok
+
+absv(12) = 12
+absv(-12) = 12
+sign(12u) = 1
+sign(-12) = -1
+sign(0) = 0
+min(3,4) = 3
+min(6u,1u) = 1
+max(-3,-6) = -3
+max(-3l,6l) = 6
+######################################################################
 memlink{27}: abcdefghijklmnopqrstuvwzyz.
 memlink{27}: abcdefghijklmnopqrstuvwzyz.
 memlink{26}: abcdefghijklmnopqrstuvwzyz

@@ -285,7 +285,7 @@ Extern* Extern::LookupByImported (iid_t iid) noexcept // static
 
 Extern::ExtMsg::ExtMsg (Msg&& msg) noexcept
 :_body (msg.MoveBody())
-,_h { Align (msg.Size(), Msg::BODY_ALIGNMENT)
+,_h { Align (_body.size(), Msg::BODY_ALIGNMENT)
     , msg.Extid()
     , msg.FdOffset()
     , WriteHeaderStrings (msg.Method()) }

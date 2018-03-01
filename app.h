@@ -51,7 +51,7 @@ public:
     void	WaitRdWr (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_RDWR, fd, t); }
 
     template <typename O>
-    static bool Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Watch())
 	    return false;
 	auto is = msg.Read();
@@ -73,7 +73,7 @@ public:
     void	Timer (int fd)			{ Send (M_Timer(), fd); }
 
     template <typename O>
-    static bool Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Timer())
 	    return false;
 	o->TimerR_Timer (msg.Read().readv<int>());
@@ -91,7 +91,7 @@ public:
     void	Signal (int sig)	{ Send (M_Signal(), sig); }
 
     template <typename O>
-    static bool Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Signal())
 	    return false;
 	o->Signal_Signal (msg.Read().readv<int>());

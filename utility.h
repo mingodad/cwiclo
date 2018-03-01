@@ -48,6 +48,9 @@ template <typename T> struct is_signed : public integral_constant<bool, !is_same
 
 template <typename T> struct bits_in_type	{ static constexpr const size_t value = sizeof(T)*8; };
 
+/// The weakest possible cast to an already convertible type
+template <typename T> constexpr decltype(auto) implicit_cast (remove_reference_t<T>& v) { return v; }
+
 //}}}-------------------------------------------------------------------
 //{{{ numeric limits
 
@@ -123,6 +126,11 @@ template <> inline int16_t bswap (int16_t v)	{ return __builtin_bswap16 (v); }
 template <> inline int32_t bswap (int32_t v)	{ return __builtin_bswap32 (v); }
 template <> inline int64_t bswap (int64_t v)	{ return __builtin_bswap64 (v); }
 
+template <typename T> inline T le_to_native (const T& v) { return v; }
+template <typename T> inline T be_to_native (const T& v) { return bswap (v); }
+template <typename T> inline T native_to_le (const T& v) { return v; }
+template <typename T> inline T native_to_be (const T& v) { return bswap (v); }
+
 //}}}----------------------------------------------------------------------
 //{{{ min and max
 
@@ -136,20 +144,18 @@ inline constexpr auto max (const T& a, const remove_reference_t<T>& b)
 //}}}----------------------------------------------------------------------
 //{{{ sign and absv
 
-namespace {
-    template <typename T, bool Signed>
-    struct __is_negative { inline constexpr bool operator()(const T& v) { return v < 0; } };
-    template <typename T>
-    struct __is_negative<T,false> { inline constexpr bool operator()(const T&) { return false; } };
-}
 template <typename T>
-inline constexpr bool is_negative (const T& v)
-    { return __is_negative<T,is_signed<T>::value>()(v); }
+inline constexpr bool is_negative (const T& v) {
+    if constexpr (is_signed<T>::value)
+	return v < 0;
+    else
+	return false;
+}
 template <typename T>
 inline constexpr auto sign (T v)
     { return (0 < v) - is_negative(v); }
 template <typename T>
-inline constexpr make_unsigned<T> absv (T v)
+inline constexpr make_unsigned_t<T> absv (T v)
     { return is_negative(v) ? -v : v; }
 template <typename T>
 inline constexpr T MultBySign (T a, remove_reference_t<T> b)
@@ -178,6 +184,9 @@ inline constexpr auto DivRU (T n1, remove_reference_t<T> n2)
 template <typename T>
 inline constexpr auto DivRound (T n1, remove_reference_t<T> n2)
     { return (n1 + MultBySign<T> (n2/2, n1)) / n2; }
+template <typename T>
+inline constexpr make_unsigned_t<T> Square (T n)
+    { return n*n; }
 
 //}}}----------------------------------------------------------------------
 //{{{ Bit manipulation
@@ -278,6 +287,47 @@ class atomic_scope_lock {
 public:
     explicit atomic_scope_lock (atomic_flag& f) noexcept : _f(f) { while (_f.test_and_set()) tight_loop_pause(); }
     ~atomic_scope_lock (void) noexcept { _f.clear(); }
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ SIMD intrinsic types
+
+// Intrinsic functions are typed for a specific vector type, such as
+// float[4]. In cwiclo, pretty much all of the uses for SSE do bulk
+// memory moves, for which strict typing is inconvenient and usually
+// wrong anyway. This union is used to present appropriate type to
+// intrinsic functions.
+
+union alignas(16) simd16_t {
+    using ui_t	= uint32_t	__attribute__((vector_size(16)));
+    using si_t	= int32_t	__attribute__((vector_size(16)));
+    using uq_t	= uint64_t	__attribute__((vector_size(16)));
+    using sq_t	= int64_t	__attribute__((vector_size(16)));
+    using sf_t	= float		__attribute__((vector_size(16)));
+    using sd_t	= double	__attribute__((vector_size(16)));
+
+    sf_t	sf;
+    sd_t	sd;
+    ui_t	ui;
+    si_t	si;
+    uq_t	uq;
+    sq_t	sq;
+    uint8_t	aub [16];
+    int8_t	asb [16];
+    uint16_t	auw [8];
+    int16_t	asw [8];
+    uint32_t	aui [4];
+    int32_t	asi [4];
+    uint64_t	auq [2];
+    int64_t	asq [2];
+    float	asf [4];
+    double	asd [2];
+
+    /// Returns a zero-filled xmm register for use with the "x" constraint.
+    static inline CONST auto zero_sf (void) noexcept {
+	simd16_t z; asm("":"=x"(z.sf));	// asm forces use of undefined value in z.sf register
+	return __builtin_ia32_xorps(z.sf,z.sf);
+    }
 };
 
 //}}}-------------------------------------------------------------------

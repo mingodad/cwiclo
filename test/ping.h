@@ -52,7 +52,7 @@ public:
     // indicates whether the message was accepted.
     //
     template <typename O>
-    static bool Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Ping()) {
 	    // Each method unmarshals the arguments and calls the handling object
 	    auto is = msg.Read();
@@ -79,7 +79,7 @@ public:
 			// create a message that only marshals arguments.
     void		Ping (uint32_t v) { Send (M_Ping(), v); }
     template <typename O>
-    static bool Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Ping())
 	    return false;
 	o->PingR_Ping (msg.Read().readv<uint32_t>());
