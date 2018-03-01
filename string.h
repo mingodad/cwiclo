@@ -73,11 +73,11 @@ public:
     inline void		pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
     inline void		clear (void)					{ assert (capacity() && "modifying a const linked string"); memlink::resize (0); *end() = 0; }
 
-    inline void		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ memblock::replace (f, l-f, s, slen); }
-    inline void		replace (const_iterator f, const_iterator l, const_pointer s)			{ replace (f, l, s, strlen(s)); }
-    inline void		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ replace (f, l, i1, i2-i1); }
-    inline void		replace (const_iterator f, const_iterator l, const string& s)			{ replace (f, l, s.begin(), s.end()); }
-    void		replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept;
+    inline auto		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ return memblock::replace (f, l-f, s, slen); }
+    inline auto		replace (const_iterator f, const_iterator l, const_pointer s)			{ return replace (f, l, s, strlen(s)); }
+    inline auto		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ return replace (f, l, i1, i2-i1); }
+    inline auto		replace (const_iterator f, const_iterator l, const string& s)			{ return replace (f, l, s.begin(), s.end()); }
+    iterator		replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept;
 
     inline auto		find (const_pointer s, const_iterator fi) const		{ return const_iterator (strstr (fi, s)); }
     inline auto		find (const string& s, const_iterator fi) const		{ return find (s.c_str(), fi); }

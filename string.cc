@@ -79,14 +79,16 @@ bool string::operator== (const_pointer s) const noexcept
     return strlen(s) == size() && 0 == strcmp (c_str(), s);
 }
 
-void string::replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept
+string::iterator string::replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept
 {
     auto dsz = difference_type(n) - (l-f);
     if (dsz > 0)
 	f = memblock::insert (f, dsz);
     else
 	f = memblock::erase (f, -dsz);
-    memset (const_cast<pointer>(f), c, n);
+    auto iwp = const_cast<pointer>(f);
+    memset (iwp, c, n);
+    return iwp;
 }
 
 auto string::rfind (const_pointer s, const_iterator fi) const noexcept -> const_iterator

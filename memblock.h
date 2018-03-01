@@ -130,7 +130,7 @@ public:
 				    { return copy_n (s, n, insert (ip, n)); }
     void		   	append (const_pointer s, size_type n)	{ insert (end(), s, n); }
     iterator			erase (const_iterator start, size_type n) noexcept;
-    void			replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept;
+    iterator			replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept;
     void			shrink_to_fit (void) noexcept;
     void			deallocate (void) noexcept;
     void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
