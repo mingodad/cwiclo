@@ -26,7 +26,6 @@ public:
 			using vecbase::vector;
 			using vecbase::insert;
 			using vecbase::erase;
-			using vecbase::emplace;
     inline		multiset (const multiset& v)	: vecbase(v) {}
     inline		multiset (const vecbase& v)	: vecbase(v) { sort(*this); }
     template <size_type N>
@@ -64,11 +63,12 @@ public:
     inline void		insert (initlist_t v)		{ insert (v.begin(), v.end()); }
     template <typename... Args>
     auto		emplace (Args&&... args) noexcept;
-    template <typename U>
-    void		erase (const U& v) noexcept {
+    template <typename... Args>
+    auto		emplace_hint (const_iterator ip, Args&&... args)	{ return vecbase::emplace (ip, forward<Args>(args)...); }
+    auto		erase (const_reference v) noexcept {
 			    auto l = lower_bound (v), u = l;
 			    while (*u == v) ++u;
-			    erase (l, u);
+			    return erase (l, u);
 			}
 };
 
