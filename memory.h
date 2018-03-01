@@ -458,7 +458,7 @@ template <typename I, typename T>
 inline auto binary_search (I f, I l, const T& v)
 {
     auto b = lower_bound (f, l, v);
-    return (b == l || v < *b) ? nullptr : b;
+    return (b < l && *b == v) ? b : nullptr;
 }
 
 template <typename I, typename T>

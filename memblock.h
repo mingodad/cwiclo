@@ -102,7 +102,6 @@ public:
     inline auto&		operator= (memlink&& v)			{ cmemlink::operator=(move(v)); return *this; }
     inline auto&		operator[] (size_type i)		{ return at (i); }
     inline auto&		operator[] (size_type i) const		{ return at (i); }
-    void			swap (memlink&& v)			{ cmemlink::swap(move(v)); }
     iterator			insert (const_iterator start, size_type n) noexcept;
     iterator			erase (const_iterator start, size_type n) noexcept;
 };
@@ -122,7 +121,6 @@ public:
     inline void			assign (memblock&& v) noexcept		{ swap (move(v)); }
     inline memblock&		operator= (const memblock& v) noexcept	{ assign (v); return *this; }
     inline memblock&		operator= (memblock&& v) noexcept	{ assign (move(v)); return *this; }
-    void			swap (memblock&& v) noexcept		{ memlink::swap (move(v)); }
     void			reserve (size_type sz) noexcept;
     void			resize (size_type sz) noexcept;
     inline void			clear (void)				{ resize(0); }
