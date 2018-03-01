@@ -121,6 +121,16 @@ private:
 STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value)
 namespace cwiclo {
 
+void cmemlink::write (sstream& os, size_type elsize) const noexcept
+{
+    auto sz = size();
+    if (sz)
+	sz += zero_terminated();
+    os << size_type(sz/elsize);
+    os.write (data(), sz);
+    os.align (stream_align<size_type>::value);
+}
+
 template <typename T> struct stream_align<vector<T>> {
     static constexpr const streamsize value = stream_align<memblock::size_type>::value;
 };

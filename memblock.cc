@@ -39,16 +39,6 @@ void cmemlink::write (ostream& os, size_type elsize) const noexcept
     os.align (stream_align<size_type>::value);
 }
 
-void cmemlink::write (sstream& os, size_type elsize) const noexcept
-{
-    auto sz = size();
-    if (sz)
-	sz += zero_terminated();
-    os << size_type(sz/elsize);
-    os.write (data(), sz);
-    os.align (stream_align<size_type>::value);
-}
-
 int cmemlink::write_file (const char* filename) const noexcept
 {
     int fd = open (filename, O_WRONLY| O_TRUNC| O_CREAT| O_CLOEXEC);

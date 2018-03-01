@@ -62,7 +62,7 @@ public:
     void			link_read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
     inline void			read (istream& is, size_type elsize = sizeof(value_type))	{ link_read (is, elsize); }
     void			write (ostream& os, size_type elsize = sizeof(value_type)) const noexcept;
-    void			write (sstream& os, size_type elsize = sizeof(value_type)) const noexcept;
+    inline void			write (sstream& os, size_type elsize = sizeof(value_type)) const noexcept;
     int				write_file (const char* filename) const noexcept;
     int				write_file_atomic (const char* filename) const noexcept;
 protected:
