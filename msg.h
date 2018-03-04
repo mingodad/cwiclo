@@ -53,6 +53,8 @@ static inline const char* SignatureOfMethod (methodid_t __restrict__ mid)
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, size_t mnamesz) noexcept;
 
+class Msger;
+
 //}}}-------------------------------------------------------------------
 //{{{ Interface definition macros
 
@@ -152,14 +154,15 @@ private:
 
 class ProxyB {
 public:
+    using pfn_factory_t = Msger* (*)(const Msg::Link& l);
+public:
     constexpr auto&	Link (void) const			{ return _link; }
     constexpr auto	Src (void) const			{ return Link().src; }
     constexpr auto	Dest (void) const			{ return Link().dest; }
-    void		CreateDestAs (iid_t iid) noexcept;
-    void		FreeId (void) noexcept;
 protected:
     constexpr		ProxyB (mrid_t from, mrid_t to)		: _link {from,to} {}
 			ProxyB (const ProxyB&) = delete;
+    inline auto&	LinkW (void) noexcept;
     void		operator= (const ProxyB&) = delete;
     Msg&		CreateMsg (methodid_t imethod, streamsize sz) noexcept;
     void		Forward (Msg&& msg) noexcept;
@@ -183,6 +186,9 @@ private:
 class Proxy : public ProxyB {
 public:
     constexpr explicit	Proxy (mrid_t from, mrid_t to=mrid_New)	: ProxyB (from,to) {}
+    void		CreateDestAs (iid_t iid) noexcept;
+    void		CreateDestWith (iid_t iid, pfn_factory_t fac) noexcept;
+    void		FreeId (void) noexcept;
 };
 class ProxyR : public ProxyB {
 public:
@@ -190,11 +196,35 @@ public:
 };
 
 //}}}-------------------------------------------------------------------
+//{{{ has_msger_named_create
+
+template <typename T> class __has_msger_named_create {
+    template <typename O, T& (*)(const Msg::Link&)> struct test_for_Create {};
+    template <typename O> static true_type found (test_for_Create<O,&O::Create>*);
+    template <typename O> static false_type found (...);
+public:
+    using type = decltype(found<T>(nullptr));
+};
+// Differentiates between normal and singleton Msger classes
+template <typename T>
+struct has_msger_named_create : public __has_msger_named_create<T>::type {};
+
+//}}}-------------------------------------------------------------------
 //{{{ Msger
 
 class Msger {
 public:
     enum { f_Unused, f_Static, f_Last };
+    //{{{2 Msger factory template --------------------------------------
+    template <typename M>
+    static Msger* Factory (const Msg::Link& l) {
+	if constexpr (has_msger_named_create<M>::value)
+	    return M::Create(l);	// this variant is used for singleton Msgers
+	else
+	    return new M(l);
+    }
+    using pfn_factory_t = ProxyB::pfn_factory_t;
+    //}}}2--------------------------------------------------------------
 public:
     virtual		~Msger (void) noexcept		{ }
     auto&		CreatorLink (void) const	{ return _link; }
@@ -218,21 +248,6 @@ private:
     Msg::Link		_link;
     uint32_t		_flags;
 };
-
-//{{{2 has_msger_named_create ------------------------------------------
-
-template <typename T> class __has_msger_named_create {
-    template <typename O, T& (*)(const Msg::Link&)> struct test_for_Create {};
-    template <typename O> static true_type found (test_for_Create<O,&O::Create>*);
-    template <typename O> static false_type found (...);
-public:
-    using type = decltype(found<T>(nullptr));
-};
-// Differentiates between normal and singleton Msger classes
-template <typename T>
-struct has_msger_named_create : public __has_msger_named_create<T>::type {};
-
-//}}}2------------------------------------------------------------------
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

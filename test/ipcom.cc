@@ -50,7 +50,7 @@ TestApp::TestApp (void) noexcept
     // exporting the Ping interface must first be established.
 }
 
-void TestApp::ProcessArgs (argc_t argc UNUSED, argv_t argv UNUSED) noexcept
+void TestApp::ProcessArgs (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]]) noexcept
 {
     #ifndef NDEBUG
 	// Debug tracing is very useful in asynchronous apps, since backtraces

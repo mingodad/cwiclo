@@ -115,6 +115,7 @@ public:
     void		ProcessArgs (argc_t, argv_t)	{ }
     inline int		Run (void) noexcept;
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
+    Msg::Link&		CreateLinkWith (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
     inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_INCLUDED) noexcept;
     inline void		ForwardMsg (Msg&& msg, Msg::Link& l) noexcept;
     static iid_t	InterfaceByName (const char* iname, streamsize inamesz) noexcept;
@@ -154,11 +155,10 @@ private:
 				Msgerp (const Msgerp&) = delete;
 				~Msgerp (void) noexcept	{ reset(); }
 	constexpr pointer	get (void) const	{ return _p; }
-	pointer			release (void)		{ auto r(_p); _p = nullptr; return r; }
+	pointer			release (pointer p = nullptr)	{ auto r(_p); _p = p; return r; }
 	bool			created (void) const	{ return SLOT_IN_USE < uintptr_t(_p); }
 	void			reset (pointer p = nullptr) {
-				    auto q(_p);
-				    _p = p;
+				    auto q = release (p);
 				    if (SLOT_IN_USE < uintptr_t(q) && !q->Flag(f_Static))
 					delete q;
 				}
@@ -178,21 +178,12 @@ private:
 	pointer		_p;
     };
     //}}}2--------------------------------------------------------------
-    //{{{2 Msger factory templates
-    template <typename M, bool NamedCreate>
-    struct __MsgerFactory { static Msger* create (const Msg::Link& l) { return new M(l); } };
-    template <typename M>	// this variant is used for singleton Msgers
-    struct __MsgerFactory<M,true> { static Msger* create (const Msg::Link& l) { return M::Create(l); } };
-
-    using pfn_msger_factory = Msger* (*)(const Msg::Link& l);
-    template <typename M>
-    static Msger* MsgerFactory (const Msg::Link& l)
-	{ return __MsgerFactory<M,has_msger_named_create<M>::value>::create(l); }
+    //{{{2 MsgerImplements
 
     // Maps a factory to an interface
     struct MsgerImplements {
 	iid_t			iface;
-	pfn_msger_factory	factory;
+	Msger::pfn_factory_t	factory;
     };
     //}}}2--------------------------------------------------------------
 public:
@@ -223,14 +214,15 @@ public:
 private:
     mrid_t		AllocateMrid (void) noexcept;
     auto&		MsgerpById (mrid_t id)	{ return _msgers[id]; }
-    pfn_msger_factory	MsgerFactoryFor (iid_t id) {
-			    for (auto mii = s_MsgerImpls; mii->iface; ++mii)
-				if (mii->iface == id)
-				    return mii->factory;
-			    return nullptr;
+    inline static auto	MsgerFactoryFor (iid_t id) {
+			    auto mii = s_MsgerImpls;
+			    while (mii->iface && mii->iface != id)
+				++mii;
+			    return mii->factory;
 			}
     inline void		SwapQueues (void) noexcept;
-    Msger*		CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
+   inline static Msger*	CreateMsgerWith (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
+    inline static auto	CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
     inline void		ProcessInputQueue (void) noexcept;
     inline void		DeleteUnusedMsgers (void) noexcept;
     inline void		ForwardReceivedSignals (void) noexcept;
@@ -353,7 +345,7 @@ int main (A::argc_t argc, A::argv_t argv) \
     { return Tmain<A> (argc, argv); }
 
 #define BEGIN_MSGERS	const App::MsgerImplements App::s_MsgerImpls[] = {
-#define REGISTER_MSGER(iface,mgtype)	{ P##iface::Interface(), &MsgerFactory<mgtype> },
+#define REGISTER_MSGER(iface,mgtype)	{ P##iface::Interface(), &Msger::Factory<mgtype> },
 #define END_MSGERS	{nullptr,nullptr}};
 
 #define BEGIN_CWICLO_APP(A)	\

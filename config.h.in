@@ -38,7 +38,6 @@
 #define PRINTFARGS(fmt,args)    __attribute__((__format__(__printf__,fmt,args)))
 #define CONST                   __attribute__((const))
 #define PURE                    __attribute__((pure))
-#define UNUSED                  __attribute__((unused))
 #define MALLOCLIKE              __attribute__((malloc))
 #define WEAKSYM			__attribute__((weak))
 #define WEAKALIAS(sym)		__attribute__((weak,alias(sym)))

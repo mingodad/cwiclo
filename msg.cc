@@ -19,26 +19,16 @@ methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, siz
 
 //----------------------------------------------------------------------
 
-void ProxyB::CreateDestAs (iid_t iid) noexcept
-{
-    App::Instance().CreateLink (_link, iid);
-}
+auto& ProxyB::LinkW (void) noexcept { return _link; }
 
 Msg& ProxyB::CreateMsg (methodid_t mid, streamsize sz) noexcept
 {
-    return App::Instance().CreateMsg (_link, mid, sz);
+    return App::Instance().CreateMsg (LinkW(), mid, sz);
 }
 
 void ProxyB::Forward (Msg&& msg) noexcept
 {
-    App::Instance().ForwardMsg (move(msg), _link);
-}
-
-void ProxyB::FreeId (void) noexcept
-{
-    auto& app = App::Instance();
-    if (app.ValidMsgerId (Dest()))
-	app.FreeMrid (Dest());
+    App::Instance().ForwardMsg (move(msg), LinkW());
 }
 
 #ifndef NDEBUG
@@ -48,6 +38,25 @@ void ProxyB::CommitMsg (Msg& msg, ostream& os) noexcept
     assert (msg.Size() == msg.Verify() && "Message body does not match method signature");
 }
 #endif
+
+//----------------------------------------------------------------------
+
+void Proxy::CreateDestAs (iid_t iid) noexcept
+{
+    App::Instance().CreateLink (LinkW(), iid);
+}
+
+void Proxy::CreateDestWith (iid_t iid, pfn_factory_t fac) noexcept
+{
+    App::Instance().CreateLinkWith (LinkW(), iid, fac);
+}
+
+void Proxy::FreeId (void) noexcept
+{
+    auto& app = App::Instance();
+    if (app.ValidMsgerId (Dest()))
+	app.FreeMrid (Dest());
+}
 
 //----------------------------------------------------------------------
 

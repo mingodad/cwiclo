@@ -135,9 +135,8 @@ void App::FreeMrid (mrid_t id) noexcept
     DEBUG_PRINTF ("MsgerId %hu released\n", id);
 }
 
-Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
+Msger* App::CreateMsgerWith (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) noexcept // static
 {
-    auto fac = MsgerFactoryFor (iid);
     Msger* r = nullptr;
     if (fac)
 	r = (*fac)(l);
@@ -156,6 +155,9 @@ Msger* App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept
     return r;
 }
 
+auto App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept // static
+    { return CreateMsgerWith (l, iid, MsgerFactoryFor (iid)); }
+
 Msg::Link& App::CreateLink (Msg::Link& l, iid_t iid) noexcept
 {
     assert (l.src != mrid_New && "You may only create links originating from an existing Msger");
@@ -166,7 +168,18 @@ Msg::Link& App::CreateLink (Msg::Link& l, iid_t iid) noexcept
 	l.dest = AllocateMrid();
     auto& mrp = MsgerpById (l.dest);
     if (!mrp.created())
-	mrp = CreateMsger (l, iid);
+	mrp.release (CreateMsger (l, iid));
+    return l;
+}
+
+Msg::Link& App::CreateLinkWith (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept
+{
+    assert (l.src != mrid_New && "You may only create links originating from an existing Msger");
+    assert (l.dest == mrid_New && "CreateLinkWith can only be used to create new links");
+    l.dest = AllocateMrid();
+    auto& mrp = MsgerpById (l.dest);
+    assert (!mrp.created() && "AllocateMrid must return an unused slot");
+    mrp.release (CreateMsgerWith (l, iid, fac));
     return l;
 }
 
