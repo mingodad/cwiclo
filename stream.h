@@ -58,7 +58,7 @@ public:
     template <typename T>
     inline istream&		operator>> (T& v);
     template <typename T>
-    inline decltype(auto)	readv (void) __restrict__;
+    inline decltype(auto)	readv (void);
 protected:
     inline void			seek (pointer p) __restrict__			{ assert(p <= end()); _p = p; }
     inline pointer		alignptr (streamsize g) const __restrict__	{ return pointer (Align (uintptr_t(_p), g)); }
@@ -174,7 +174,7 @@ template <typename T>
 istream& istream::operator>> (T& v)
     { type_streaming_t<T>::read (*this, v); return *this; }
 template <typename T>
-decltype(auto) istream::readv (void) __restrict__
+decltype(auto) istream::readv (void)
     { return type_streaming_t<T>::readv (*this); }
 template <typename T>
 ostream& ostream::operator<< (const T& v)

@@ -323,12 +323,43 @@ union alignas(16) simd16_t {
     float	asf [4];
     double	asd [2];
 
-    /// Returns a zero-filled xmm register for use with the "x" constraint.
-    static inline CONST auto zero_sf (void) noexcept {
-	simd16_t z; asm("":"=x"(z.sf));	// asm forces use of undefined value in z.sf register
-	return __builtin_ia32_xorps(z.sf,z.sf);
-    }
+    static inline CONST auto zero_sf (void) noexcept;
 };
+
+#if __clang__
+namespace {
+
+#if __AVX__
+static inline auto __builtin_ia32_loadups (const float* f)
+    { simd16_t::sf_t v; asm ("vmovups\t%1, %0":"=x"(v):"m"(*(const simd16_t::sf_t*) f)); return (v); }
+static inline void __builtin_ia32_storeups (float* f, simd16_t::sf_t v)
+    { asm ("vmovups\t%1, %0":"=m"(*(simd16_t::sf_t*) f):"x"(v)); }
+static inline auto __builtin_ia32_xorps (simd16_t::sf_t v1, simd16_t::sf_t v2)
+    { asm ("vxorps\t%1, %0, %0":"+x"(v1):"x"(v2)); return (v1); }
+static inline auto __builtin_ia32_paddq128 (simd16_t::sf_t v1, simd16_t::sf_t v2)
+    { asm ("vpaddq\t%1, %0, %0":"+x"(v1):"x"(v2)); return (v1); }
+#elif __SSE2__
+static inline auto __builtin_ia32_loadups (const float* f)
+    { simd16_t::sf_t v; asm ("movups\t%1, %0":"=x"(v):"m"(*(const simd16_t::sf_t*) f)); return (v); }
+static inline void __builtin_ia32_storeups (float* f, simd16_t::sf_t v)
+    { asm ("movups\t%1, %0":"=m"(*(simd16_t::sf_t*) f):"x"(v)); }
+static inline auto __builtin_ia32_xorps (simd16_t::sf_t v1, simd16_t::sf_t v2)
+    { asm ("xorps\t%1, %0":"+x"(v1):"x"(v2)); return (v1); }
+static inline auto __builtin_ia32_paddq128 (simd16_t::sf_t v1, simd16_t::sf_t v2)
+    { asm ("paddq\t%1, %0":"+x"(v1):"x"(v2)); return (v1); }
+#endif
+static inline auto __builtin_ia32_movss (simd16_t::sf_t v1, simd16_t::sf_t v2)
+    { v1[0] = v2[0]; return (v1); }
+
+} // namespace
+#endif // clang
+
+/// Returns a zero-filled xmm register for use with the "x" constraint.
+auto simd16_t::zero_sf (void) noexcept // static
+{
+    simd16_t z; asm("":"=x"(z.sf));	// asm forces use of undefined value in z.sf register
+    return __builtin_ia32_xorps(z.sf,z.sf);
+}
 
 //}}}-------------------------------------------------------------------
 //{{{ File utility functions

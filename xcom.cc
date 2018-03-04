@@ -94,7 +94,7 @@ int PExtern::ConnectUserLocal (const char* sockname) noexcept
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    auto runtimeDir = getenv ("XDG_RUNTIME_DIR");
+    const char* runtimeDir = getenv ("XDG_RUNTIME_DIR");
     if (!runtimeDir)
 	runtimeDir = _PATH_TMP;
     if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
@@ -427,7 +427,7 @@ void Extern::EnableCredentialsPassing (int enable) noexcept
 void Extern::COM_Error (const string& errmsg) noexcept
 {
     // Errors occuring on in the Extern Msger on the other side of the socket
-    Error (errmsg.c_str());	// report it on this side
+    Error ("%s", errmsg.c_str());	// report it on this side
 }
 
 void Extern::COM_Export (string&& elist) noexcept
@@ -791,7 +791,7 @@ void COMRelay::COM_Error (const string& errmsg) noexcept
     // COM_Error is received for errors in the remote object. The remote
     // object is destroyed and COM_Delete will shortly follow. Here, create
     // a local error and send it to the local object.
-    Error (errmsg.c_str());
+    Error ("%s", errmsg.c_str());
     // Because the local object may not be the creator of this relay, the
     // error must be forwarded there manually.
     App::Instance().ForwardError (_localp.Dest(), _localp.Src());
@@ -884,7 +884,7 @@ int PExternServer::BindUserLocal (const char* sockname, const iid_t* eifaces) no
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    auto runtimeDir = getenv ("XDG_RUNTIME_DIR");
+    const char* runtimeDir = getenv ("XDG_RUNTIME_DIR");
     if (!runtimeDir)
 	runtimeDir = _PATH_TMP;
     if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {

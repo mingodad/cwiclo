@@ -214,7 +214,7 @@ private:
 	methodid_t	ParseMethod (void) const noexcept;
 	inline void	DebugDump (void) const noexcept;
     private:
-	const char*	HeaderPtr (void) const	{ return &_hbuf[-sizeof(_h)]; }
+	const char*	HeaderPtr (void) const	{ auto hp = _hbuf; return hp-sizeof(_h); }
 	char*		HeaderPtr (void)	{ return const_cast<char*>(const_cast<const ExtMsg*>(this)->HeaderPtr()); }
 	uint8_t		WriteHeaderStrings (methodid_t method) noexcept;
     private:
