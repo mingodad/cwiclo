@@ -77,19 +77,27 @@ move(T&& v) noexcept { return static_cast<remove_reference_t<T>&&>(v); }
 /// Assigns the contents of a to b and the contents of b to a.
 /// This is used as a primitive operation by many other algorithms.
 template <typename T>
-inline void swap (T&& a, T&& b)
+inline void swap (T& a, T& b)
     { auto t = move(a); a = move(b); b = move(t); }
 
 template <typename T, size_t N>
 inline void swap (T (&a)[N], T (&b)[N])
 {
     for (size_t i = 0; i < N; ++i)
-	swap (move(a[i]), move(b[i]));
+	swap (a[i], b[i]);
+}
+
+template <typename T, typename U = T>
+inline auto exchange (T& o, U&& nv)
+{
+    auto ov = move(o);
+    o = forward<T>(nv);
+    return ov;
 }
 
 template <typename I>
 inline void iter_swap (I a, I b)
-    { swap (move(*a), move(*b)); }
+    { swap (*a, *b); }
 
 //}}}-------------------------------------------------------------------
 //{{{ iterator_traits
@@ -388,10 +396,7 @@ inline void itswap16 (T* f, T* t)
 #if __SSE2__
     swap (reinterpret_cast<simd16_t*>(f)->sf, reinterpret_cast<simd16_t*>(t)->sf);
 #else
-    char buf[16];
-    memcpy (buf, f, 16);
-    memcpy (f, t, 16);
-    memcpy (t, buf, 16);
+    iter_swap (f, t);
 #endif
 }
 

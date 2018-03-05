@@ -24,12 +24,20 @@ public:
     using const_iterator	= const_pointer;
     using iterator		= pointer;
 public:
-    inline			cmemlink (void)				{ itzero16 (this); }
     inline constexpr		cmemlink (const_pointer p, size_type n)	: _data(const_cast<pointer>(p)), _size(n), _capz() {}
     inline constexpr		cmemlink (const_pointer p, size_type n, bool z)	: _data(const_cast<pointer>(p)), _size(n), _capz(z) {}
     inline			cmemlink (const void* p, size_type n)	: cmemlink (reinterpret_cast<const_pointer>(p), n) {}
+#if __SSE2__
+    inline			cmemlink (void)				{ itzero16 (this); }
     inline			cmemlink (const cmemlink& v)		{ itcopy16 (&v, this); }
     inline			cmemlink (cmemlink&& v)			{ itmoveinit16 (&v, this); }
+    void			swap (cmemlink&& v)			{ itswap16 (&v, this); }
+#else
+    inline constexpr		cmemlink (void)				: _data (nullptr), _size(), _capz() {}
+    inline constexpr		cmemlink (const cmemlink& v)		: cmemlink (v._data, v._size, v._zerot) {}
+    inline 			cmemlink (cmemlink&& v)			: _data (exchange (v._data, nullptr)), _size (exchange (v._size, 0u)), _capz (exchange (v._capz, 0u)) {}
+    void			swap (cmemlink&& v)			{ ::cwiclo::swap (_data, v._data); ::cwiclo::swap (_size, v._size); ::cwiclo::swap (_capz, v._capz); }
+#endif
     inline auto&		operator= (const cmemlink& v)		{ link (v); return *this; }
     inline auto&		operator= (cmemlink&& v)		{ swap (move(v)); return *this; }
     inline constexpr auto	max_size (void) const			{ return numeric_limits<size_type>::max()/2-1; }
@@ -53,7 +61,6 @@ public:
     inline void			link (const_pointer p, size_type n, bool z)	{ link (const_cast<pointer>(p), n, z); }
     inline void			link (const cmemlink& v)			{ link (v.begin(), v.size(), v.zero_terminated()); }
     inline void			unlink (void)				{ _data = nullptr; _size = 0; _capacity = 0; }
-    void			swap (cmemlink&& v)			{ itswap16 (&v, this); }
     inline void			resize (size_type sz)			{ _size = sz; }
     inline void			clear (void)				{ resize(0); }
     void			link_read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
