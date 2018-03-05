@@ -37,6 +37,7 @@ vp = 4321
 advance(cvp,5) = 1239
 advance(vp,4) = 4325
 distance(cvp,vp) = 30ED
+unique_ptr(24) = 24
 ArraySize(c_Numbers[5]) = 5
 bswap(1234) = 3412
 le_to_native(1234) = ok

@@ -77,19 +77,19 @@ move(T&& v) noexcept { return static_cast<remove_reference_t<T>&&>(v); }
 /// Assigns the contents of a to b and the contents of b to a.
 /// This is used as a primitive operation by many other algorithms.
 template <typename T>
-inline void swap (T& a, T& b)
+inline void swap (T&& a, T&& b)
     { auto t = move(a); a = move(b); b = move(t); }
 
 template <typename T, size_t N>
 inline void swap (T (&a)[N], T (&b)[N])
 {
     for (size_t i = 0; i < N; ++i)
-	swap (a[i], b[i]);
+	swap (move(a[i]), move(b[i]));
 }
 
 template <typename I>
 inline void iter_swap (I a, I b)
-    { swap (*a, *b); }
+    { swap (move(*a), move(*b)); }
 
 //}}}-------------------------------------------------------------------
 //{{{ iterator_traits
@@ -161,7 +161,7 @@ public:
     inline constexpr auto	get (void) const		{ return _p; }
     inline auto			release (void)			{ auto rv (_p); _p = nullptr; return rv; }
     inline void			reset (pointer p = nullptr)	{ assert (p != _p || !p); auto ov (_p); _p = p; delete ov; }
-    inline void			swap (unique_ptr& v)		{ swap (_p, v._p); }
+    inline void			swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
     inline constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
     inline auto&		operator= (pointer p)		{ reset (p); return *this; }
     inline auto&		operator= (unique_ptr&& p)	{ reset (p.release()); return *this; }

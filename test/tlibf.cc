@@ -94,6 +94,10 @@ static void TestUtility (void)
     printf ("advance(vp,4) = %lX\n", (uintptr_t) advance(vp,4));
     printf ("distance(cvp,vp) = %zX\n", distance(cvp,(const void*)vp));
 
+    auto up1 = make_unique<int> (42);
+    up1.swap (make_unique<int> (24));
+    printf ("unique_ptr(24) = %d\n", *up1);
+
     const int32_t c_Numbers[] = { 1, 2, 3, 4, 5 };
     printf ("ArraySize(c_Numbers[5]) = %zd\n", ArraySize(c_Numbers));
 
