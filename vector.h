@@ -179,7 +179,7 @@ void vector<T>::resize (size_type n, const_reference v) noexcept
 template <typename T>
 bool vector<T>::operator== (const vector& v) const noexcept
 {
-    if (is_trivial<T>::value)
+    if constexpr (is_trivial<T>::value)
 	return _data == v._data;
     if (size() != v.size())
 	return false;
@@ -230,7 +230,7 @@ auto vector<T>::erase (const_iterator cep, size_type n) noexcept
 template <typename T>
 void vector<T>::copy_link (void) noexcept
 {
-    if (is_trivial<T>::value)
+    if constexpr (is_trivial<T>::value)
 	_data.copy_link();
     else
 	assign (begin(), end());
@@ -239,12 +239,12 @@ void vector<T>::copy_link (void) noexcept
 template <typename T>
 void vector<T>::read (istream& is) noexcept
 {
-    if (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 	return _data.read (is, sizeof(T));
     size_type n; is >> n;
-    if (stream_align<T>::value > stream_align<size_type>::value)
+    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
 	is >> ios::talign<T>();
-    if (is_trivially_copyable<T>::value) {
+    if constexpr (is_trivially_copyable<T>::value) {
 	assert (is.remaining() >= n*sizeof(T));
 	const T* d = is.ptr<T>();
 	assign (d, d+n);
@@ -254,40 +254,40 @@ void vector<T>::read (istream& is) noexcept
 	for (auto& i : *this)
 	    is >> i;
     }
-    if (stream_align<T>::value < stream_align<size_type>::value)
+    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
 	is >> ios::talign<size_type>();
 }
 
 template <typename T>
 void vector<T>::write (ostream& os) const noexcept
 {
-    if (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 	return _data.write (os, sizeof(T));
     os << size();
-    if (stream_align<T>::value > stream_align<size_type>::value)
+    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
 	os << ios::talign<T>();
-    if (is_trivially_copyable<T>::value) {
+    if constexpr (is_trivially_copyable<T>::value) {
 	copy_n (begin(), size(), os.ptr<T>());
 	os.skip (bsize());
     } else for (const auto& i : *this)
 	os << i;
-    if (stream_align<T>::value < stream_align<size_type>::value)
+    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
 	os << ios::talign<size_type>();
 }
 
 template <typename T>
 inline void vector<T>::write (sstream& ss) const noexcept
 {
-    if (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 	return _data.write (ss, sizeof(T));
     ss << size();
-    if (stream_align<T>::value > stream_align<size_type>::value)
+    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
 	ss << ios::talign<T>();
-    if (is_trivially_copyable<T>::value)
+    if constexpr (is_trivially_copyable<T>::value)
 	ss.skip (bsize());
     else for (const auto& i : *this)
 	ss << i;
-    if (stream_align<T>::value < stream_align<size_type>::value)
+    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
 	ss << ios::talign<size_type>();
 }
 

@@ -56,9 +56,19 @@ public:
     template <typename T>
     inline void			read_trivial (T& v) __restrict__ { v = read_trivial<T>(); }
     template <typename T>
-    inline istream&		operator>> (T& v);
+    inline istream&		operator>> (T& v) {
+				    if constexpr (is_trivial<T>::value)
+					read_trivial (v);
+				    else
+					v.read (*this);
+				    return *this;
+				}
     template <typename T>
-    inline decltype(auto)	readv (void);
+    inline decltype(auto)	readv (void) {
+				    if constexpr (is_trivial<T>::value)
+					return read_trivial<T>();
+				    else { T v; v.read (*this); return v; }
+				}
 protected:
     inline void			seek (pointer p) __restrict__			{ assert(p <= end()); _p = p; }
     inline pointer		alignptr (streamsize g) const __restrict__	{ return pointer (Align (uintptr_t(_p), g)); }
@@ -114,7 +124,13 @@ public:
 				    _p += sizeof(T);
 				}
     template <typename T>
-    inline ostream&		operator<< (const T& v);
+    inline ostream&		operator<< (const T& v) {
+				    if constexpr (is_trivial<T>::value)
+					write_trivial (v);
+				    else
+					v.write (*this);
+				    return *this;
+				}
 protected:
     inline void			seek (pointer p) __restrict__	{ assert(p < end()); _p = p; }
     inline const_pointer	alignptr (streamsize g) const __restrict__	{ return const_pointer (Align (uintptr_t(_p), g)); }
@@ -145,43 +161,16 @@ public:
     template <typename T>
     inline void			write_trivial (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
-    inline sstream&		operator<< (const T& v);
+    inline sstream&		operator<< (const T& v) {
+				    if constexpr (is_trivial<T>::value)
+					write_trivial (v);
+				    else
+					v.write (*this);
+				    return *this;
+				}
 private:
     streampos			_sz;
 };
-
-//}}}-------------------------------------------------------------------
-//{{{ Stream operators << and >>
-
-template <typename T, bool Trivial>
-struct type_streaming {
-    static inline void read (istream& is, T& v) { v.read (is); }
-    static inline auto readv (istream& is) { T v; v.read (is); return v; }
-    static inline void write (ostream& os, const T& v) { v.write (os); }
-    static inline void size (sstream& ss, const T& v) { v.write (ss); }
-};
-template <typename T>
-struct type_streaming<T,true> {
-    static inline void read (istream& is, T& v) { is.read_trivial(v); }
-    static inline auto& readv (istream& is) { return is.read_trivial<T>(); }
-    static inline void write (ostream& os, const T& v) { os.write_trivial(v); }
-    static inline void size (sstream& ss, const T& v) { ss.write_trivial(v); }
-};
-template <typename T>
-using type_streaming_t = type_streaming<remove_reference_t<T>,is_trivial<remove_reference_t<T>>::value>;
-
-template <typename T>
-istream& istream::operator>> (T& v)
-    { type_streaming_t<T>::read (*this, v); return *this; }
-template <typename T>
-decltype(auto) istream::readv (void)
-    { return type_streaming_t<T>::readv (*this); }
-template <typename T>
-ostream& ostream::operator<< (const T& v)
-    { type_streaming_t<T>::write (*this, v); return *this; }
-template <typename T>
-sstream& sstream::operator<< (const T& v)
-    { type_streaming_t<T>::size (*this, v); return *this; }
 
 //}}}-------------------------------------------------------------------
 //{{{ stream_size_of and stream_align
@@ -189,6 +178,10 @@ sstream& sstream::operator<< (const T& v)
 /// Returns the size of the given object. Do not overload - use sstream.
 template <typename T>
 inline auto stream_size_of (const T& v) { sstream ss; ss << v; return ss.size(); }
+
+template <typename... Args>
+inline auto variadic_stream_size (const Args&... args)
+    { sstream ss; (ss << ... << args); return ss.size(); }
 
 /// Returns the recommended stream alignment for type \p T. Override with STREAM_ALIGN.
 template <typename T>
@@ -201,14 +194,7 @@ inline constexpr auto stream_align_of (const T&) { return stream_align<T>::value
     namespace cwiclo { template <> struct stream_align<type> { static constexpr const streamsize value = grain; };}
 
 //}}}-------------------------------------------------------------------
-//{{{ Variadic serialization
-
-template <typename... Args>
-inline auto variadic_stream_size (const Args&... args)
-    { sstream ss; (ss << ... << args); return ss.size(); }
-
-//}}}-------------------------------------------------------------------
-//{{{ stream operators
+//{{{ Stream functors
 
 namespace ios {
 
