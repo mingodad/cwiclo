@@ -72,6 +72,7 @@ void App::FatalSignalHandler (int sig) noexcept // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set()) {
+	alarm (1);
 	fprintf (stderr, "[S] Error: %s\n", strsignal(sig));
 	#ifndef NDEBUG
 	    print_backtrace();
@@ -84,8 +85,10 @@ void App::FatalSignalHandler (int sig) noexcept // static
 void App::MsgSignalHandler (int sig) noexcept // static
 {
     s_ReceivedSignals |= S(sig);
-    if (sigset_Quit & S(sig))
+    if (sigset_Quit & S(sig)) {
 	App::Instance().Quit();
+	alarm (1);
+    }
 }
 
 #ifndef NDEBUG
