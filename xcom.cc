@@ -424,13 +424,13 @@ void Extern::EnableCredentialsPassing (int enable) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::COM
 
-void Extern::COM_Error (const string& errmsg) noexcept
+void Extern::COM_Error (const lstring& errmsg) noexcept
 {
     // Errors occuring on in the Extern Msger on the other side of the socket
     Error ("%s", errmsg.c_str());	// report it on this side
 }
 
-void Extern::COM_Export (string&& elist) noexcept
+void Extern::COM_Export (string elist) noexcept
 {
     // Other side of the socket listing exported interfaces as a comma-separated list
     _einfo.imported.clear();
@@ -442,7 +442,7 @@ void Extern::COM_Export (string&& elist) noexcept
 	auto iid = App::InterfaceByName (ei, eic-ei);
 	if (iid)	// _einfo.imported only contains interfaces supported by this App
 	    _einfo.imported.push_back (iid);
-	ei = const_cast<string::iterator>(eic);
+	ei = eic;
     }
     _reply.Connected (&_einfo);
 }
@@ -786,7 +786,7 @@ void COMRelay::OnMsgerDestroyed (mrid_t id) noexcept
     SetFlag (f_Unused);
 }
 
-void COMRelay::COM_Error (const string& errmsg) noexcept
+void COMRelay::COM_Error (const lstring& errmsg) noexcept
 {
     // COM_Error is received for errors in the remote object. The remote
     // object is destroyed and COM_Delete will shortly follow. Here, create
@@ -797,7 +797,7 @@ void COMRelay::COM_Error (const string& errmsg) noexcept
     App::Instance().ForwardError (_localp.Dest(), _localp.Src());
 }
 
-void COMRelay::COM_Export (const string&) noexcept
+void COMRelay::COM_Export (const lstring&) noexcept
 {
     // Relays never receive this message
 }

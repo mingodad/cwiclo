@@ -55,6 +55,26 @@ methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, siz
 
 class Msger;
 
+// Helpers for efficiently unmarshalling lstrings
+inline auto lstring_from_const_stream (const istream& is)
+{
+    auto ssz = *is.ptr<uint32_t>();
+    auto scp = is.ptr<char>()+sizeof(ssz)-!ssz;
+    if (ssz)
+	--ssz;
+    return lstring (scp, ssz);
+}
+
+inline auto lstring_from_stream (istream& is)
+{
+    auto ssz = is.readv<uint32_t>();
+    auto scp = is.ptr<char>()-!ssz;
+    is.skip (Align (ssz,sizeof(ssz)));
+    if (ssz)
+	--ssz;
+    return lstring (scp, ssz);
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ Interface definition macros
 

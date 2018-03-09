@@ -27,11 +27,11 @@ public:
 							{ return ExportMsg (extid, StringFromInterfaceList (elist)); }
     static Msg	DeleteMsg (mrid_t extid) noexcept	{ return Msg (Msg::Link{}, PCOM::M_Delete(), 0, extid); }
     template <typename O>
-    static bool	Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Error())
-	    o->COM_Error (msg.Read().readv<lstring>());
+	    o->COM_Error (lstring_from_const_stream (msg.Read()));
 	else if (msg.Method() == M_Export())
-	    o->COM_Export (msg.Read().readv<string>());
+	    o->COM_Export (lstring_from_const_stream (msg.Read()));
 	else if (msg.Method() == M_Delete())
 	    o->COM_Delete ();
 	else
@@ -128,8 +128,8 @@ public:
     virtual bool	Dispatch (Msg& msg) noexcept override;
     virtual bool	OnError (mrid_t eid, const string& errmsg) noexcept override;
     virtual void	OnMsgerDestroyed (mrid_t id) noexcept override;
-    inline void		COM_Error (const string& errmsg) noexcept;
-    inline void		COM_Export (const string& elist) noexcept;
+    inline void		COM_Error (const lstring& errmsg) noexcept;
+    inline void		COM_Export (const lstring& elist) noexcept;
     inline void		COM_Delete (void) noexcept;
 private:
     Extern*	_pExtern;	// Outgoing connection object
@@ -173,8 +173,8 @@ public:
     void		UnregisterRelay (const COMRelay* relay) noexcept;
     inline void		Extern_Open (int fd, const iid_t* eifaces, bool isServer) noexcept;
     void		Extern_Close (void) noexcept;
-    inline void		COM_Error (const string& errmsg) noexcept;
-    inline void		COM_Export (string&& elist) noexcept;
+    inline void		COM_Error (const lstring& errmsg) noexcept;
+    inline void		COM_Export (string elist) noexcept;
     inline void		COM_Delete (void) noexcept;
     void		TimerR_Timer (int fd) noexcept;
 private:

@@ -11,11 +11,11 @@ namespace cwiclo {
 class string : public memblock {
 public:
     inline		string (void)					: memblock() { set_zero_terminated(); }
-    inline		string (const_pointer s1, const_pointer s2)	: string() { assert (s1<=s2); assign (s1, s2-s1); }
-    inline		string (const_pointer s, size_type len)		: string() { assign (s, len); }
+    inline		string (const_pointer s, size_type len)		: memblock (s,len,true) { copy_link(); }
+    inline		string (const_pointer s1, const_pointer s2)	: string (s1,s2-s1) {}
     inline		string (const_pointer s)			: memblock (s, strlen(s), true) {}
     inline		string (string&& s)				: memblock (move(s)) {}
-    inline		string (const string& s)			: string() { assign (s); }
+    inline		string (const string& s)			: string (s.data(), s.size()) {}
     inline auto		c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
     inline auto&	back (void) const				{ return at(size()-1); }
     inline auto&	back (void)					{ return at(size()-1); }
@@ -122,7 +122,7 @@ public:
 class lstring : public cmemlink {
 public:
 			lstring (void)					: cmemlink () { set_zero_terminated(); }
-    constexpr		lstring (const_pointer s, size_type len)	: cmemlink (s, len) {}
+    constexpr		lstring (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
     constexpr		lstring (const_pointer s1, const_pointer s2)	: lstring (s1, s2-s1) {}
     inline		lstring (const_pointer s)			: lstring (s, strlen(s)) {}
     inline		lstring (lstring&& s)				: cmemlink (move(s)) {}
