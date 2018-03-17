@@ -191,9 +191,9 @@ public:
     friend class Timer;
     class Timer : public Msger {
     public:
-			Timer (const Msg::Link& l) : Msger(l),_nextfire(PTimer::TIMER_NONE),_reply(l),_cmd(),_fd(-1)
+	explicit	Timer (const Msg::Link& l) : Msger(l),_nextfire(PTimer::TIMER_NONE),_reply(l),_cmd(),_fd(-1)
 			    { App::Instance().AddTimer (this); }
-			~Timer (void) noexcept
+	virtual		~Timer (void) noexcept override
 			    { App::Instance().RemoveTimer (this); }
 	virtual bool	Dispatch (Msg& msg) noexcept override
 			    { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }

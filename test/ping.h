@@ -95,7 +95,7 @@ public:
 //
 class PingMsger : public Msger {
 public:
-			PingMsger (const Msg::Link& l)
+    explicit		PingMsger (const Msg::Link& l)
 			    : Msger(l),_reply(l),_nPings(0)
 			    { LOG ("Created Ping%hu\n", MsgerId()); }
     virtual		~PingMsger (void) noexcept override

@@ -92,8 +92,8 @@ public:
     inline auto&		push_back (const T& v)			{ return emplace_back (v); }
     inline auto&		push_back (T&& v)			{ return emplace_back (move(v)); }
     inline auto&		push_back (void)			{ return emplace_back(); }
-    inline auto			append (const T& v)			{ return push_back(v); }
-    inline auto			append (T&& v)				{ return push_back(move(v)); }
+    inline auto			append (const T& v)			{ return &push_back(v); }
+    inline auto			append (T&& v)				{ return &push_back(move(v)); }
     inline auto			append (const_iterator i1, const_iterator i2)	{ return insert (end(), i1, i2); }
     inline auto			append (size_type n, const T& v)	{ return insert (end(), n, v); }
     inline auto			append (initlist_t v)			{ return append (v.begin(), v.end()); }

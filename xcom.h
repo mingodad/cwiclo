@@ -163,7 +163,7 @@ protected:
     };
 public:
     explicit		Extern (const Msg::Link& l) noexcept;
-    virtual		~Extern (void) noexcept;
+    virtual		~Extern (void) noexcept override;
     auto&		Info (void) const	{ return _einfo; }
     virtual bool	Dispatch (Msg& msg) noexcept override;
     void		QueueOutgoing (Msg&& msg) noexcept;
@@ -309,7 +309,7 @@ private:
 class ExternServer : public Msger {
     enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
 public:
-			ExternServer (const Msg::Link& l) noexcept;
+    explicit		ExternServer (const Msg::Link& l) noexcept;
     virtual bool	OnError (mrid_t eid, const string& errmsg) noexcept override;
     virtual void	OnMsgerDestroyed (mrid_t mid) noexcept override;
     virtual bool	Dispatch (Msg& msg) noexcept override;
