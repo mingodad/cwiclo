@@ -52,11 +52,11 @@ public:
     template <typename U>
     inline auto		upper_bound (const U& v) const	{ return ::cwiclo::upper_bound (this->begin(), this->end(), v); }
     template <typename U>
-    inline auto		find (const U& v)		{ return const_cast<iterator>(const_cast<const multiset&>(*this).find (v)); }
+    inline auto		find (const U& v)		{ return UNCONST_MEMBER_FN (find,v); }
     template <typename U>
-    inline auto		lower_bound (const U& v)	{ return const_cast<iterator>(const_cast<const multiset&>(*this).lower_bound (v)); }
+    inline auto		lower_bound (const U& v)	{ return UNCONST_MEMBER_FN (lower_bound,v); }
     template <typename U>
-    inline auto		upper_bound (const U& v)	{ return const_cast<iterator>(const_cast<const multiset&>(*this).upper_bound (v)); }
+    inline auto		upper_bound (const U& v)	{ return UNCONST_MEMBER_FN (upper_bound,v); }
     auto		insert (const_reference v)	{ return vecbase::insert (lower_bound(v), v); }
     auto		insert (T&& v)			{ return vecbase::insert (lower_bound(v), move(v)); }
     inline void		insert (const_iterator i1, const_iterator i2)	{ for (; i1 < i2; ++i1) insert (*i1); }

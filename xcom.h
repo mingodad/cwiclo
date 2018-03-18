@@ -215,7 +215,7 @@ private:
 	inline void	DebugDump (void) const noexcept;
     private:
 	const char*	HeaderPtr (void) const	{ auto hp = _hbuf; return hp-sizeof(_h); }
-	char*		HeaderPtr (void)	{ return const_cast<char*>(const_cast<const ExtMsg*>(this)->HeaderPtr()); }
+	char*		HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr); }
 	uint8_t		WriteHeaderStrings (methodid_t method) noexcept;
     private:
 	memblock	_body;

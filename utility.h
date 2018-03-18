@@ -30,6 +30,20 @@ template <typename T> struct remove_reference<T&>	{ using type = T; };
 template <typename T> struct remove_reference<T&&>	{ using type = T; };
 template <typename T> using remove_reference_t = typename remove_reference<T>::type;
 
+template <typename T> struct remove_inner_const { using type = T; };
+template <typename T> struct remove_inner_const<const T> { using type = T; };
+template <typename T> struct remove_inner_const<const T*> { using type = T*; };
+template <typename T> struct remove_inner_const<const T&> { using type = T&; };
+template <typename T> using remove_inner_const_t = typename remove_inner_const<T>::type;
+
+template <typename T> struct add_inner_const { using type = const T; };
+template <typename T> struct add_inner_const<const T> { using type = const T; };
+template <typename T> struct add_inner_const<const T*> { using type = const T*; };
+template <typename T> struct add_inner_const<const T&> { using type = const T&; };
+template <typename T> struct add_inner_const<T*> { using type = const T*; };
+template <typename T> struct add_inner_const<T&> { using type = const T&; };
+template <typename T> using add_inner_const_t = typename add_inner_const<T>::type;
+
 template <typename T> T&& declval (void) noexcept;
 
 template <typename T> struct is_trivial : public integral_constant<bool, __is_trivial(T)> {};
@@ -48,8 +62,12 @@ template <typename T> struct is_signed : public integral_constant<bool, !is_same
 
 template <typename T> struct bits_in_type	{ static constexpr const size_t value = sizeof(T)*8; };
 
-/// The weakest possible cast to an already convertible type
+// The weakest possible cast to an already convertible type
 template <typename T> constexpr decltype(auto) implicit_cast (remove_reference_t<T>& v) { return v; }
+
+// Create a passthrough non-const member function from a call to a const member function
+#define UNCONST_MEMBER_FN(f,...)	\
+    const_cast<remove_inner_const_t<decltype((const_cast<add_inner_const_t<decltype(this)>>(this)->f(__VA_ARGS__)))>>(const_cast<add_inner_const_t<decltype(this)>>(this)->f(__VA_ARGS__));
 
 //}}}-------------------------------------------------------------------
 //{{{ numeric limits

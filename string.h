@@ -85,12 +85,12 @@ public:
     inline auto		find (const_reference c, const_iterator fi) const	{ return const_iterator (strchr (fi, c)); }
     inline auto		find (const_reference c) const				{ return find (c, begin()); }
 
-    inline auto		find (const_pointer s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->find(s,fi)); }
-    inline auto		find (const string& s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->find(s,fi)); }
-    inline auto		find (const_pointer s)					{ return const_cast<iterator>(const_cast<const string*>(this)->find(s)); }
-    inline auto		find (const string& s)					{ return const_cast<iterator>(const_cast<const string*>(this)->find(s)); }
-    inline auto		find (const_reference c, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->find(c,fi)); }
-    inline auto		find (const_reference c)				{ return const_cast<iterator>(const_cast<const string*>(this)->find(c)); }
+    inline auto		find (const_pointer s, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,s,fi); }
+    inline auto		find (const string& s, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,s,fi); }
+    inline auto		find (const_pointer s)					{ return UNCONST_MEMBER_FN (find,s); }
+    inline auto		find (const string& s)					{ return UNCONST_MEMBER_FN (find,s); }
+    inline auto		find (const_reference c, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,c,fi); }
+    inline auto		find (const_reference c)				{ return UNCONST_MEMBER_FN (find,c); }
 
     const_iterator	rfind (const_pointer s, const_iterator fi) const noexcept;
     inline auto		rfind (const string& s, const_iterator fi) const	{ return rfind (s.c_str(), fi); }
@@ -99,22 +99,22 @@ public:
     inline auto		rfind (const_reference c, const_iterator fi) const	{ return const_iterator (memrchr (begin(), c, fi-begin())); }
     inline auto		rfind (const_reference c) const				{ return rfind (c, end()); }
 
-    inline auto		rfind (const_pointer s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s,fi)); }
-    inline auto		rfind (const string& s, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s,fi)); }
-    inline auto		rfind (const_pointer s)					{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s)); }
-    inline auto		rfind (const string& s)					{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(s)); }
-    inline auto		rfind (const_reference c, const_iterator fi)		{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(c,fi)); }
-    inline auto		rfind (const_reference c)				{ return const_cast<iterator>(const_cast<const string*>(this)->rfind(c)); }
+    inline auto		rfind (const_pointer s, const_iterator fi)		{ return UNCONST_MEMBER_FN (rfind,s,fi); }
+    inline auto		rfind (const string& s, const_iterator fi)		{ return UNCONST_MEMBER_FN (rfind,s,fi); }
+    inline auto		rfind (const_pointer s)					{ return UNCONST_MEMBER_FN (rfind,s); }
+    inline auto		rfind (const string& s)					{ return UNCONST_MEMBER_FN (rfind,s); }
+    inline auto		rfind (const_reference c, const_iterator fi)		{ return UNCONST_MEMBER_FN (rfind,c,fi); }
+    inline auto		rfind (const_reference c)				{ return UNCONST_MEMBER_FN (rfind,c); }
 
     auto		find_first_of (const_pointer s) const noexcept		{ auto rsz = strcspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
     inline auto		find_first_of (const string& s) const			{ return find_first_of (s.c_str()); }
     auto		find_first_not_of (const_pointer s) const noexcept	{ auto rsz = strspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
     inline auto		find_first_not_of (const string& s) const		{ return find_first_not_of (s.c_str()); }
 
-    inline auto		find_first_of (const_pointer s)				{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_of(s)); }
-    inline auto		find_first_of (const string& s)				{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_of(s)); }
-    inline auto		find_first_not_of (const_pointer s)			{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_not_of(s)); }
-    inline auto		find_first_not_of (const string& s)			{ return const_cast<iterator>(const_cast<const string*>(this)->find_first_not_of(s)); }
+    inline auto		find_first_of (const_pointer s)				{ return UNCONST_MEMBER_FN (find_first_of,s); }
+    inline auto		find_first_of (const string& s)				{ return UNCONST_MEMBER_FN (find_first_of,s); }
+    inline auto		find_first_not_of (const_pointer s)			{ return UNCONST_MEMBER_FN (find_first_not_of,s); }
+    inline auto		find_first_not_of (const string& s)			{ return UNCONST_MEMBER_FN (find_first_not_of,s); }
 };
 
 //----------------------------------------------------------------------
