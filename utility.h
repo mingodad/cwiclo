@@ -79,8 +79,18 @@ private:
 public:
     static constexpr const bool is_signed = ::cwiclo::is_signed<T>::value;	///< True if the type is signed.
     static constexpr const bool is_integral = is_trivial<T>::value;	///< True if fixed size and cast-copyable.
-    static inline constexpr auto min (void)	{ return is_signed ? base_type(1)<<(bits_in_type<base_type>::value-1) : base_type(0); }
-    static inline constexpr auto max (void)	{ return base_type(min()-1); }
+    static inline constexpr auto min (void) {
+	if constexpr (is_signed)
+	    return base_type(1)<<(bits_in_type<base_type>::value-1);
+	else
+	    return base_type(0);
+    }
+    static inline constexpr auto max (void) {
+	if constexpr (is_signed)
+	    return base_type(make_unsigned_t<base_type>(min())-1);
+	else
+	    return base_type(~base_type(0));
+    }
 };
 
 //}}}-------------------------------------------------------------------
