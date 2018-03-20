@@ -161,9 +161,7 @@ auto memblock::erase (const_iterator start, size_type n) noexcept -> iterator
     const auto ep = start - begin();
     assert (ep + n <= size());
     memlink::erase (start, n);
-    memlink::resize (size() - n);
-    if (zero_terminated())
-	*end() = 0;
+    resize (size() - n);
     return iat (ep);
 }
 
