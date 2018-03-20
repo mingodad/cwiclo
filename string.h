@@ -69,7 +69,7 @@ public:
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<l); return erase (f, l-f); }
     inline void		pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
-    inline void		clear (void)					{ assert (capacity() && "modifying a const linked string"); memlink::resize (0); *end() = 0; }
+    inline void		clear (void)					{ memlink::resize (0); auto e = end(); if (e) { assert (capacity() && "modifying a const linked string"); *e = 0; }}
 
 			using memblock::replace;
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ return memblock::replace (f, l-f, s, slen); }
