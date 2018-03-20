@@ -67,10 +67,38 @@ extern "C" void print_backtrace (void) noexcept
 #if __has_include(<execinfo.h>)
     void* frames[32];
     auto nf = backtrace (ArrayBlock(frames));
-    if (nf > 1) {
-	fflush (stdout);
-	backtrace_symbols_fd (&frames[1], nf-1, STDOUT_FILENO);
+    if (nf <= 1)
+	return;
+    auto syms = backtrace_symbols (frames, nf);
+    if (!syms)
+	return;
+    for (auto f = 1; f < nf; ++f) {
+	// Symbol names are formatted thus: "file(function+0x42) [0xAddress]"
+	// Parse out the function name
+	auto fnstart = strchr (syms[f], '(');
+	if (!fnstart)
+	    fnstart = syms[f];
+	else
+	    ++fnstart;
+	auto fnend = strchr (fnstart, '+');
+	if (!fnend) {
+	    fnend = strchr (fnstart, ')');
+	    if (!fnend)
+		fnend = fnstart + strlen(fnstart);
+	}
+	auto addrstart = strchr (fnend, '[');
+	if (addrstart) {
+	    auto addr = strtoul (++addrstart, nullptr, 0);
+	    if constexpr (sizeof(void*) <= 8)
+		printf ("%8lx\t", addr);
+	    else
+		printf ("%16lx\t", addr);
+	}
+	fwrite (fnstart, 1, fnend-fnstart, stdout);
+	fputc ('\n', stdout);
     }
+    free (syms);
+    fflush (stdout);
 #endif
 }
 
