@@ -169,6 +169,7 @@ public:
     void		QueueOutgoing (Msg&& msg) noexcept;
     static Extern*	LookupById (mrid_t id) noexcept;
     static Extern*	LookupByImported (iid_t id) noexcept;
+    static Extern*	LookupByRelayId (mrid_t rid) noexcept;
     mrid_t		RegisterRelay (const COMRelay* relay) noexcept;
     void		UnregisterRelay (const COMRelay* relay) noexcept;
     inline void		Extern_Open (int fd, const iid_t* eifaces, bool isServer) noexcept;

@@ -268,15 +268,22 @@ void Extern::UnregisterRelay (const COMRelay* relay) noexcept
 
 Extern* Extern::LookupById (mrid_t id) noexcept // static
 {
-    auto ep = linear_search_if (ExternList(), [&](const Extern* e)
+    auto ep = linear_search_if (ExternList(), [&](auto e)
 		{ return e->MsgerId() == id; });
     return ep ? *ep : nullptr;
 }
 
 Extern* Extern::LookupByImported (iid_t iid) noexcept // static
 {
-    auto ep = linear_search_if (ExternList(), [&](const Extern* e)
+    auto ep = linear_search_if (ExternList(), [&](auto e)
 		{ return e->Info().IsImporting(iid); });
+    return ep ? *ep : nullptr;
+}
+
+Extern* Extern::LookupByRelayId (mrid_t rid) noexcept // static
+{
+    auto ep = linear_search_if (ExternList(), [&](auto e)
+		{ return nullptr != e->RelayProxyById (rid); });
     return ep ? *ep : nullptr;
 }
 
