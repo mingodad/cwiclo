@@ -73,8 +73,7 @@ template <typename T> constexpr decltype(auto) implicit_cast (remove_reference_t
 //{{{ numeric limits
 
 template <typename T>
-struct numeric_limits {
-private:
+class numeric_limits {
     using base_type = remove_reference_t<T>;
 public:
     static constexpr const bool is_signed = ::cwiclo::is_signed<T>::value;	///< True if the type is signed.
@@ -89,7 +88,7 @@ public:
 	if constexpr (is_signed)
 	    return base_type(make_unsigned_t<base_type>(min())-1);
 	else
-	    return base_type(~base_type(0));
+	    return base_type(~min());
     }
 };
 

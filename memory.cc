@@ -42,6 +42,37 @@ void  operator delete[] (void* p, size_t n) noexcept	WEAKALIAS("_free");
 
 //----------------------------------------------------------------------
 
+namespace std {
+
+void terminate (void) noexcept { abort(); }
+
+} // namespace std
+namespace __cxxabiv1 {
+extern "C" {
+
+#ifndef NDEBUG
+#define TERMINATE_ALIAS(name)	void name (void) noexcept { assert (!#name); std::terminate(); }
+#else
+#define TERMINATE_ALIAS(name)	void name (void) noexcept WEAKALIAS("_ZSt9terminatev");
+#endif
+TERMINATE_ALIAS (__cxa_call_unexpected)
+TERMINATE_ALIAS (__cxa_pure_virtual)
+TERMINATE_ALIAS (__cxa_deleted_virtual)
+TERMINATE_ALIAS (__cxa_bad_cast)
+TERMINATE_ALIAS (__cxa_bad_typeid)
+TERMINATE_ALIAS (__cxa_throw_bad_array_new_length)
+TERMINATE_ALIAS (__cxa_throw_bad_array_length)
+#undef TERMINATE_ALIAS
+
+int __cxa_guard_acquire (__guard* g) noexcept { return !g->test_and_set(); }
+void __cxa_guard_release (__guard*) noexcept {}
+void __cxa_guard_abort (__guard* g) noexcept { g->clear(); }
+
+} // extern "C"
+} // namespace __cxxabiv1
+
+//----------------------------------------------------------------------
+
 namespace cwiclo {
 
 extern "C" void brotate (void* vf, void* vm, void* vl) noexcept
