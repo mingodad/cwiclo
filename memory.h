@@ -499,7 +499,7 @@ template <typename I, typename T>
 auto lower_bound (I f, I l, const T& v)
 {
     while (f < l) {
-	auto m = f + (l - f)/2;
+	auto m = f + uintptr_t(l - f)/2;
 	if (*m < v)
 	    f = m + 1;
 	else
@@ -519,7 +519,7 @@ template <typename I, typename T>
 auto upper_bound (I f, I l, const T& v)
 {
     while (f < l) {
-	auto m = f + (l - f)/2;
+	auto m = f + uintptr_t(l - f)/2;
 	if (v < *m)
 	    l = m;
 	else
