@@ -25,38 +25,36 @@ namespace cwiclo {
 class PTimer : public Proxy {
     DECLARE_INTERFACE (Timer, (Watch,"uix"))
 public:
-    enum ETimerWatchCmd : uint32_t {
-	WATCH_STOP              = 0,
-	WATCH_READ              = POLLIN,
-	WATCH_WRITE             = POLLOUT,
-	WATCH_RDWR              = WATCH_READ| WATCH_WRITE,
-	WATCH_TIMER             = POLLMSG,
-	WATCH_READ_TIMER        = WATCH_READ| WATCH_TIMER,
-	WATCH_WRITE_TIMER       = WATCH_WRITE| WATCH_TIMER,
-	WATCH_RDWR_TIMER        = WATCH_RDWR| WATCH_TIMER
+    enum class WatchCmd : uint32_t {
+	Stop		= 0,
+	Read		= POLLIN,
+	Write		= POLLOUT,
+	ReadWrite	= Read| Write,
+	Timer		= POLLMSG,
+	ReadTimer	= Read| Timer,
+	WriteTimer	= Write| Timer,
+	ReadWriteTimer	= ReadWrite| Timer
     };
     using fd_t = int32_t;
     using mstime_t = uint64_t;
-    enum : mstime_t {
-	TIMER_MAX = INT64_MAX,
-	TIMER_NONE = UINT64_MAX
-    };
+    static constexpr mstime_t TimerMax = INT64_MAX;
+    static constexpr mstime_t TimerNone = UINT64_MAX;
 public:
     explicit	PTimer (mrid_t caller) : Proxy (caller) {}
-    void	Watch (ETimerWatchCmd cmd, fd_t fd, mstime_t timeoutms = TIMER_NONE)
+    void	Watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms = TimerNone)
 		    { Send (M_Watch(), cmd, fd, timeoutms); }
-    void	Stop (void)					{ Watch (WATCH_STOP, -1, TIMER_NONE); }
-    void	Timer (mstime_t timeoutms)			{ Watch (WATCH_TIMER, -1, timeoutms); }
-    void	WaitRead (fd_t fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_READ, fd, t); }
-    void	WaitWrite (fd_t fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_WRITE, fd, t); }
-    void	WaitRdWr (fd_t fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_RDWR, fd, t); }
+    void	Stop (void)					{ Watch (WatchCmd::Stop, -1, TimerNone); }
+    void	Timer (mstime_t timeoutms)			{ Watch (WatchCmd::Timer, -1, timeoutms); }
+    void	WaitRead (fd_t fd, mstime_t t = TimerNone)	{ Watch (WatchCmd::Read, fd, t); }
+    void	WaitWrite (fd_t fd, mstime_t t = TimerNone)	{ Watch (WatchCmd::Write, fd, t); }
+    void	WaitRdWr (fd_t fd, mstime_t t = TimerNone)	{ Watch (WatchCmd::ReadWrite, fd, t); }
 
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Watch())
 	    return false;
 	auto is = msg.Read();
-	auto cmd = is.readv<ETimerWatchCmd>();
+	auto cmd = is.readv<WatchCmd>();
 	auto fd = is.readv<fd_t>();
 	auto timer = is.readv<mstime_t>();
 	o->Timer_Watch (cmd, fd, timer);
@@ -194,14 +192,14 @@ public:
     friend class Timer;
     class Timer : public Msger {
     public:
-	explicit	Timer (const Msg::Link& l) : Msger(l),_nextfire(PTimer::TIMER_NONE),_reply(l),_cmd(),_fd(-1)
+	explicit	Timer (const Msg::Link& l) : Msger(l),_nextfire(PTimer::TimerNone),_reply(l),_cmd(),_fd(-1)
 			    { App::Instance().AddTimer (this); }
 			~Timer (void) noexcept override
 			    { App::Instance().RemoveTimer (this); }
 	bool		Dispatch (Msg& msg) noexcept override
 			    { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
-	inline void	Timer_Watch (PTimer::ETimerWatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept;
-	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WATCH_STOP; _fd = -1; _nextfire = PTimer::TIMER_NONE; }
+	inline void	Timer_Watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept;
+	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
 	void		Fire (void)		{ _reply.Timer (_fd); Stop(); }
 	auto		Fd (void) const		{ return _fd; }
 	auto		Cmd (void) const	{ return _cmd; }
@@ -210,7 +208,7 @@ public:
     public:
 	PTimer::mstime_t	_nextfire;
 	PTimerR			_reply;
-	PTimer::ETimerWatchCmd	_cmd;
+	PTimer::WatchCmd	_cmd;
 	int			_fd;
     };
     //}}}2--------------------------------------------------------------
@@ -312,12 +310,12 @@ void App::RunTimers (void) noexcept
     CheckPollTimers (fds);
 }
 
-void App::Timer::Timer_Watch (PTimer::ETimerWatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept
+void App::Timer::Timer_Watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept
 {
     _cmd = cmd;
-    SetFlag (f_Unused, _cmd == PTimer::WATCH_STOP);
+    SetFlag (f_Unused, _cmd == PTimer::WatchCmd::Stop);
     _fd = fd;
-    _nextfire = timeoutms + (timeoutms <= PTimer::TIMER_MAX ? PTimer::Now() : PTimer::TIMER_NONE);
+    _nextfire = timeoutms + (timeoutms <= PTimer::TimerMax ? PTimer::Now() : PTimer::TimerNone);
 }
 
 Msg& App::CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid, Msg::fdoffset_t fdo) noexcept

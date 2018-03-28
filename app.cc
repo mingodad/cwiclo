@@ -298,22 +298,22 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
     // Note that there may be a timeout without any fds
     //
     auto npfd = 0u;
-    PTimer::mstime_t nearest = PTimer::TIMER_MAX;
+    PTimer::mstime_t nearest = PTimer::TimerMax;
     for (auto t : _timers) {
-	if (t->Cmd() == PTimer::WATCH_STOP)
+	if (t->Cmd() == PTimer::WatchCmd::Stop)
 	    continue;
 	nearest = min (nearest, t->NextFire());
 	if (t->Fd() >= 0) {
 	    if (npfd >= pfdsz)
 		break;
 	    pfd[npfd].fd = t->Fd();
-	    pfd[npfd].events = t->Cmd();
+	    pfd[npfd].events = (int) t->Cmd();
 	    pfd[npfd++].revents = 0;
 	}
     }
     if (!_outq.empty())
 	timeout = 0;	// do not wait if there are messages to process
-    else if (nearest == PTimer::TIMER_MAX)	// wait indefinitely
+    else if (nearest == PTimer::TimerMax)	// wait indefinitely
 	timeout = -!!npfd;	// if no fds, then don't wait at all
     else // get current time and compute timeout to nearest
 	timeout = max (nearest - PTimer::Now(), 0);
@@ -328,8 +328,8 @@ void App::CheckPollTimers (const pollfd* fds) noexcept
     const auto* cfd = fds;
     for (auto t : _timers) {
 	bool timerExpired = t->NextFire() <= now,
-	    hasFd = (t->Fd() >= 0 && t->Cmd() != PTimer::WATCH_STOP),
-	    fdFired = hasFd && (cfd->revents & (POLLERR| t->Cmd()));
+	    hasFd = (t->Fd() >= 0 && t->Cmd() != PTimer::WatchCmd::Stop),
+	    fdFired = hasFd && (cfd->revents & (POLLERR| (int)t->Cmd()));
 
 	// Log the firing if tracing
 	if (DEBUG_MSG_TRACE) {

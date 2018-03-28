@@ -105,9 +105,41 @@ public:
     inline void			link (const_pointer p, size_type n)	{ _data.link (memblock::const_pointer(p), n * sizeof(T)); }
     inline void			link (const vector& v)			{ _data.link (v); }
     inline void			link (const_pointer f, const_pointer l)	{ link (f, l-f); }
-    void			read (istream& is) noexcept;
-    void			write (ostream& os) const noexcept;
-    inline void			write (sstream& os) const noexcept;
+    void			read (istream& is) noexcept {
+				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+					return _data.read (is, sizeof(T));
+				    size_type n; is >> n;
+				    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
+					is >> ios::talign<T>();
+				    if constexpr (is_trivially_copyable<T>::value) {
+					assert (is.remaining() >= n*sizeof(T));
+					const T* d = is.ptr<T>();
+					assign (d, d+n);
+					is.skip (n*sizeof(T));
+				    } else {
+					resize (n);
+					for (auto& i : *this)
+					    is >> i;
+				    }
+				    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
+					is >> ios::talign<size_type>();
+				}
+    template <typename Stm>
+    void			write (Stm& os) const noexcept {
+				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
+					return _data.write (os, sizeof(T));
+				    os << size();
+				    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
+					os << ios::talign<T>();
+				    if constexpr (is_trivially_copyable<T>::value) {
+					if constexpr (Stm::is_writing)
+					    copy_n (begin(), size(), os.template ptr<T>());
+					os.skip (bsize());
+				    } else for (const auto& i : *this)
+					os << i;
+				    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
+					os << ios::talign<size_type>();
+				}
 protected:
     inline auto			insert_hole (const_iterator ip, size_type n)
 				    { return iterator (_data.insert (memblock::const_iterator(ip), n*sizeof(T))); }
@@ -234,61 +266,6 @@ void vector<T>::copy_link (void) noexcept
 	_data.copy_link();
     else
 	assign (begin(), end());
-}
-
-template <typename T>
-void vector<T>::read (istream& is) noexcept
-{
-    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
-	return _data.read (is, sizeof(T));
-    size_type n; is >> n;
-    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
-	is >> ios::talign<T>();
-    if constexpr (is_trivially_copyable<T>::value) {
-	assert (is.remaining() >= n*sizeof(T));
-	const T* d = is.ptr<T>();
-	assign (d, d+n);
-	is.skip (n*sizeof(T));
-    } else {
-	resize (n);
-	for (auto& i : *this)
-	    is >> i;
-    }
-    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
-	is >> ios::talign<size_type>();
-}
-
-template <typename T>
-void vector<T>::write (ostream& os) const noexcept
-{
-    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
-	return _data.write (os, sizeof(T));
-    os << size();
-    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
-	os << ios::talign<T>();
-    if constexpr (is_trivially_copyable<T>::value) {
-	copy_n (begin(), size(), os.ptr<T>());
-	os.skip (bsize());
-    } else for (const auto& i : *this)
-	os << i;
-    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
-	os << ios::talign<size_type>();
-}
-
-template <typename T>
-inline void vector<T>::write (sstream& ss) const noexcept
-{
-    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
-	return _data.write (ss, sizeof(T));
-    ss << size();
-    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
-	ss << ios::talign<T>();
-    if constexpr (is_trivially_copyable<T>::value)
-	ss.skip (bsize());
-    else for (const auto& i : *this)
-	ss << i;
-    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
-	ss << ios::talign<size_type>();
 }
 
 } // namespace cwiclo

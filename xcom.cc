@@ -467,9 +467,9 @@ void Extern::TimerR_Timer (PTimer::fd_t) noexcept
 {
     if (_sockfd >= 0)
 	ReadIncoming();
-    auto tcmd = PTimer::WATCH_READ;
+    auto tcmd = PTimer::WatchCmd::Read;
     if (_sockfd >= 0 && WriteOutgoing())
-	tcmd = PTimer::WATCH_RDWR;
+	tcmd = PTimer::WatchCmd::ReadWrite;
     if (_sockfd >= 0)
 	_timer.Watch (tcmd, _sockfd);
 }

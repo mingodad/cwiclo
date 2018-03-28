@@ -131,11 +131,13 @@ public:
 					v.write (*this);
 				    return *this;
 				}
-protected:
-    inline void			seek (pointer p) __restrict__	{ assert(p < end()); _p = p; }
-    inline const_pointer	alignptr (streamsize g) const __restrict__	{ return const_pointer (Align (uintptr_t(_p), g)); }
 private:
-    pointer	_p;
+    inline void			seek (pointer p) __restrict__
+				    { assert(p < end()); _p = p; }
+    inline const_pointer	alignptr (streamsize g) const __restrict__
+				    { return const_pointer (Align (uintptr_t(_p), g)); }
+private:
+    pointer			_p;
     const const_pointer		_e;
 };
 
@@ -151,6 +153,9 @@ public:
     inline constexpr		sstream (const sstream& ss) = default;
     inline constexpr auto	size (void) const	{ return _sz; }
     inline constexpr streamsize	remaining (void) const	{ return UINT32_MAX; }
+    template <typename T = char>
+    inline constexpr T*		ptr (void)	{ return nullptr; }
+    inline constexpr auto	end (void)	{ return ptr(); }
     inline void			skip (streamsize sz)	{ _sz += sz; }
     inline void			align (streamsize g)	{ _sz = Align (_sz, g); }
     inline constexpr streamsize	alignsz (streamsize g) const	{ return Align(_sz,g) - _sz; }
