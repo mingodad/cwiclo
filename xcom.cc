@@ -463,7 +463,7 @@ void Extern::COM_Delete (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::Timer
 
-void Extern::TimerR_Timer (int) noexcept
+void Extern::TimerR_Timer (PTimer::fd_t) noexcept
 {
     if (_sockfd >= 0)
 	ReadIncoming();
@@ -850,7 +850,7 @@ int PExternServer::Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* e
 	    free (_sockname);
 	_sockname = strdup (((const sockaddr_un*)addr)->sun_path);
     }
-    Open (fd, eifaces, false);
+    Open (fd, eifaces, RemainWhenEmpty);
     return fd;
 }
 
@@ -982,7 +982,7 @@ bool ExternServer::Dispatch (Msg& msg) noexcept
 	|| Msger::Dispatch (msg);
 }
 
-void ExternServer::TimerR_Timer (int) noexcept
+void ExternServer::TimerR_Timer (PTimer::fd_t) noexcept
 {
     for (int cfd; 0 <= (cfd = accept (_sockfd, nullptr, nullptr));) {
 	DEBUG_PRINTF ("[X] Client connection accepted on fd %d\n", cfd);

@@ -35,6 +35,7 @@ public:
 	WATCH_WRITE_TIMER       = WATCH_WRITE| WATCH_TIMER,
 	WATCH_RDWR_TIMER        = WATCH_RDWR| WATCH_TIMER
     };
+    using fd_t = int32_t;
     using mstime_t = uint64_t;
     enum : mstime_t {
 	TIMER_MAX = INT64_MAX,
@@ -42,13 +43,13 @@ public:
     };
 public:
     explicit	PTimer (mrid_t caller) : Proxy (caller) {}
-    void	Watch (ETimerWatchCmd cmd, int fd, mstime_t timeoutms = TIMER_NONE)
+    void	Watch (ETimerWatchCmd cmd, fd_t fd, mstime_t timeoutms = TIMER_NONE)
 		    { Send (M_Watch(), cmd, fd, timeoutms); }
     void	Stop (void)					{ Watch (WATCH_STOP, -1, TIMER_NONE); }
     void	Timer (mstime_t timeoutms)			{ Watch (WATCH_TIMER, -1, timeoutms); }
-    void	WaitRead (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_READ, fd, t); }
-    void	WaitWrite (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_WRITE, fd, t); }
-    void	WaitRdWr (int fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_RDWR, fd, t); }
+    void	WaitRead (fd_t fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_READ, fd, t); }
+    void	WaitWrite (fd_t fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_WRITE, fd, t); }
+    void	WaitRdWr (fd_t fd, mstime_t t = TIMER_NONE)	{ Watch (WATCH_RDWR, fd, t); }
 
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
@@ -56,7 +57,7 @@ public:
 	    return false;
 	auto is = msg.Read();
 	auto cmd = is.readv<ETimerWatchCmd>();
-	auto fd = is.readv<int>();
+	auto fd = is.readv<fd_t>();
 	auto timer = is.readv<mstime_t>();
 	o->Timer_Watch (cmd, fd, timer);
 	return true;
@@ -69,14 +70,16 @@ public:
 class PTimerR : public ProxyR {
     DECLARE_INTERFACE (TimerR, (Timer,"i"));
 public:
+    using fd_t = PTimer::fd_t;
+public:
     explicit	PTimerR (const Msg::Link& l)	: ProxyR (l) {}
-    void	Timer (int fd)			{ Send (M_Timer(), fd); }
+    void	Timer (fd_t fd)			{ Send (M_Timer(), fd); }
 
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Timer())
 	    return false;
-	o->TimerR_Timer (msg.Read().readv<int>());
+	o->TimerR_Timer (msg.Read().readv<fd_t>());
 	return true;
     }
 };
@@ -197,7 +200,7 @@ public:
 			    { App::Instance().RemoveTimer (this); }
 	bool		Dispatch (Msg& msg) noexcept override
 			    { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
-	inline void	Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms) noexcept;
+	inline void	Timer_Watch (PTimer::ETimerWatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept;
 	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WATCH_STOP; _fd = -1; _nextfire = PTimer::TIMER_NONE; }
 	void		Fire (void)		{ _reply.Timer (_fd); Stop(); }
 	auto		Fd (void) const		{ return _fd; }
@@ -309,7 +312,7 @@ void App::RunTimers (void) noexcept
     CheckPollTimers (fds);
 }
 
-void App::Timer::Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms) noexcept
+void App::Timer::Timer_Watch (PTimer::ETimerWatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept
 {
     _cmd = cmd;
     SetFlag (f_Unused, _cmd == PTimer::WATCH_STOP);

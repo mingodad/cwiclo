@@ -46,27 +46,29 @@ public:
 class PExtern : public Proxy {
     DECLARE_INTERFACE (Extern, (Open,"xib")(Close,""))
 public:
+    using fd_t = PTimer::fd_t;
+public:
     explicit	PExtern (mrid_t caller)	: Proxy(caller) {}
 		~PExtern (void)		{ FreeId(); }
     void	Close (void)		{ Send (M_Close()); }
-    void	Open (int fd, const iid_t* eifaces, bool isServer = true)
+    void	Open (fd_t fd, const iid_t* eifaces, bool isServer = true)
 		    { Send (M_Open(), eifaces, fd, isServer); }
-    void	Open (int fd)		{ Open (fd, nullptr, false); }
-    int		Connect (const sockaddr* addr, socklen_t addrlen) noexcept;
-    int		ConnectIP4 (in_addr_t ip, in_port_t port) noexcept;
-    int		ConnectIP6 (in6_addr ip, in_port_t port) noexcept;
-    int		ConnectLocal (const char* path) noexcept;
-    int		ConnectLocalIP4 (in_port_t port) noexcept;
-    int		ConnectLocalIP6 (in_port_t port) noexcept;
-    int		ConnectSystemLocal (const char* sockname) noexcept;
-    int		ConnectUserLocal (const char* sockname) noexcept;
-    int		LaunchPipe (const char* exe, const char* arg) noexcept;
+    void	Open (fd_t fd)		{ Open (fd, nullptr, false); }
+    fd_t	Connect (const sockaddr* addr, socklen_t addrlen) noexcept;
+    fd_t	ConnectIP4 (in_addr_t ip, in_port_t port) noexcept;
+    fd_t	ConnectIP6 (in6_addr ip, in_port_t port) noexcept;
+    fd_t	ConnectLocal (const char* path) noexcept;
+    fd_t	ConnectLocalIP4 (in_port_t port) noexcept;
+    fd_t	ConnectLocalIP6 (in_port_t port) noexcept;
+    fd_t	ConnectSystemLocal (const char* sockname) noexcept;
+    fd_t	ConnectUserLocal (const char* sockname) noexcept;
+    fd_t	LaunchPipe (const char* exe, const char* arg) noexcept;
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Open()) {
 	    auto is = msg.Read();
 	    auto eifaces = is.readv<const iid_t*>();
-	    auto fd = is.readv<int>();
+	    auto fd = is.readv<fd_t>();
 	    auto isServer = is.readv<bool>();
 	    o->Extern_Open (fd, eifaces, isServer);
 	} else if (msg.Method() == M_Close())
@@ -172,12 +174,12 @@ public:
     static Extern*	LookupByRelayId (mrid_t rid) noexcept;
     mrid_t		RegisterRelay (const COMRelay* relay) noexcept;
     void		UnregisterRelay (const COMRelay* relay) noexcept;
-    inline void		Extern_Open (int fd, const iid_t* eifaces, bool isServer) noexcept;
+    inline void		Extern_Open (PExtern::fd_t fd, const iid_t* eifaces, bool isServer) noexcept;
     void		Extern_Close (void) noexcept;
     inline void		COM_Error (const lstring& errmsg) noexcept;
     inline void		COM_Export (string elist) noexcept;
     inline void		COM_Delete (void) noexcept;
-    void		TimerR_Timer (int fd) noexcept;
+    void		TimerR_Timer (PTimer::fd_t fd) noexcept;
 private:
     //{{{2 ExtMsg ------------------------------------------------------
     // Message formatted for reading/writing to socket
@@ -207,9 +209,9 @@ private:
 	void		SetHeader (const Header& h)	{ _h = h; }
 	void		ResizeBody (streamsize sz)	{ _body.resize (sz); }
 	void		TrimBody (streamsize sz)	{ _body.memlink::resize (sz); }
-	auto&&		MoveBody (void)		{ return move(_body); }
-	void		SetPassedFd (int fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
-	int		PassedFd (void) const noexcept;
+	auto&&		MoveBody (void)			{ return move(_body); }
+	void		SetPassedFd (PExtern::fd_t fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
+	PExtern::fd_t	PassedFd (void) const noexcept;
 	void		WriteIOVecs (iovec* iov, streamsize bw) noexcept;
 	istream		Read (void) const	{ return istream (_body.data(), _body.size()); }
 	methodid_t	ParseMethod (void) const noexcept;
@@ -244,10 +246,10 @@ private:
     bool		WriteOutgoing (void) noexcept;
     void		ReadIncoming (void) noexcept;
     inline bool		AcceptIncomingMessage (void) noexcept;
-    inline bool		ValidateSocket (int fd) noexcept;
+    inline bool		ValidateSocket (PExtern::fd_t fd) noexcept;
     void		EnableCredentialsPassing (int enable) noexcept;
 private:
-    int			_sockfd;
+    PExtern::fd_t	_sockfd;
     PTimer		_timer;
     PExternR		_reply;
     streamsize		_bwritten;
@@ -256,7 +258,7 @@ private:
     ExternInfo		_einfo;
     streamsize		_bread;
     ExtMsg		_inmsg;		// currently incoming message
-    int			_infd;
+    PExtern::fd_t	_infd;
 };
 
 #define REGISTER_EXTERNS\
@@ -273,26 +275,29 @@ private:
 class PExternServer : public Proxy {
     DECLARE_INTERFACE (ExternServer, (Open,"xib")(Close,""))
 public:
+    using fd_t = PExtern::fd_t;
+    enum ECloseWhenEmpty : bool { RemainWhenEmpty, CloseWhenEmpty };
+public:
     explicit	PExternServer (mrid_t caller)	: Proxy(caller),_sockname(nullptr) {}
 		~PExternServer (void) noexcept;
     void	Close (void)			{ Send (M_Close()); }
-    void	Open (int fd, const iid_t* eifaces, bool closeWhenEmpty = true)
+    void	Open (fd_t fd, const iid_t* eifaces, ECloseWhenEmpty closeWhenEmpty = CloseWhenEmpty)
 		    { Send (M_Open(), eifaces, fd, closeWhenEmpty); }
-    int		Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) noexcept NONNULL();
-    int		BindLocal (const char* path, const iid_t* eifaces) noexcept NONNULL();
-    int		BindUserLocal (const char* sockname, const iid_t* eifaces) noexcept NONNULL();
-    int		BindSystemLocal (const char* sockname, const iid_t* eifaces) noexcept NONNULL();
-    int		BindIP4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
-    int		BindLocalIP4 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
-    int		BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
-    int		BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	BindLocal (const char* path, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	BindUserLocal (const char* sockname, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	BindSystemLocal (const char* sockname, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	BindIP4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	BindLocalIP4 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
     template <typename O>
     inline static bool	Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Open()) {
 	    auto is = msg.Read();
 	    auto eifaces = is.readv<const iid_t*>();
-	    auto fd = is.readv<int>();
-	    auto closeWhenEmpty = is.readv<bool>();
+	    auto fd = is.readv<fd_t>();
+	    auto closeWhenEmpty = is.readv<ECloseWhenEmpty>();
 	    o->ExternServer_Open (fd, eifaces, closeWhenEmpty);
 	} else if (msg.Method() == M_Close())
 	    o->ExternServer_Close();
@@ -314,14 +319,14 @@ public:
     bool		OnError (mrid_t eid, const string& errmsg) noexcept override;
     void		OnMsgerDestroyed (mrid_t mid) noexcept override;
     bool		Dispatch (Msg& msg) noexcept override;
-    inline void		TimerR_Timer (int) noexcept;
-    inline void		ExternServer_Open (int fd, const iid_t* eifaces, bool closeWhenEmpty) noexcept;
+    inline void		TimerR_Timer (PTimer::fd_t) noexcept;
+    inline void		ExternServer_Open (PTimer::fd_t fd, const iid_t* eifaces, bool closeWhenEmpty) noexcept;
     inline void		ExternServer_Close (void) noexcept;
     inline void		ExternR_Connected (const ExternInfo* einfo) noexcept;
 private:
     PTimer		_timer;
     PExternR		_reply;
-    int			_sockfd;
+    PTimer::fd_t	_sockfd;
     const iid_t*	_eifaces;
     vector<PExtern>	_conns;
 };
