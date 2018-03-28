@@ -138,7 +138,7 @@ public:
 #endif
 protected:
     inline		App (void) noexcept;
-    virtual		~App (void) noexcept override;
+			~App (void) noexcept override;
     static void		FatalSignalHandler (int sig) noexcept;
     static void		MsgSignalHandler (int sig) noexcept;
 private:
@@ -193,9 +193,9 @@ public:
     public:
 	explicit	Timer (const Msg::Link& l) : Msger(l),_nextfire(PTimer::TIMER_NONE),_reply(l),_cmd(),_fd(-1)
 			    { App::Instance().AddTimer (this); }
-	virtual		~Timer (void) noexcept override
+			~Timer (void) noexcept override
 			    { App::Instance().RemoveTimer (this); }
-	virtual bool	Dispatch (Msg& msg) noexcept override
+	bool		Dispatch (Msg& msg) noexcept override
 			    { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
 	inline void	Timer_Watch (PTimer::ETimerWatchCmd cmd, int fd, mstime_t timeoutms) noexcept;
 	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WATCH_STOP; _fd = -1; _nextfire = PTimer::TIMER_NONE; }

@@ -10,7 +10,7 @@ public:
     // Apps always use the singleton pattern
     static auto& Instance (void) noexcept { static TestApp s_App; return s_App; }
 
-    virtual bool Dispatch (Msg& msg) noexcept override {
+    bool Dispatch (Msg& msg) noexcept override {
 	//
 	// Every Msger must implement the Dispatch virtual,
 	// listing all interfaces it responds to. Here, the

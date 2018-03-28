@@ -124,10 +124,10 @@ class Extern;
 class COMRelay : public Msger {
 public:
     explicit		COMRelay (const Msg::Link& l) noexcept;
-    virtual		~COMRelay (void) noexcept override;
-    virtual bool	Dispatch (Msg& msg) noexcept override;
-    virtual bool	OnError (mrid_t eid, const string& errmsg) noexcept override;
-    virtual void	OnMsgerDestroyed (mrid_t id) noexcept override;
+			~COMRelay (void) noexcept override;
+    bool		Dispatch (Msg& msg) noexcept override;
+    bool		OnError (mrid_t eid, const string& errmsg) noexcept override;
+    void		OnMsgerDestroyed (mrid_t id) noexcept override;
     inline void		COM_Error (const lstring& errmsg) noexcept;
     inline void		COM_Export (const lstring& elist) noexcept;
     inline void		COM_Delete (void) noexcept;
@@ -163,9 +163,9 @@ protected:
     };
 public:
     explicit		Extern (const Msg::Link& l) noexcept;
-    virtual		~Extern (void) noexcept override;
+			~Extern (void) noexcept override;
     auto&		Info (void) const	{ return _einfo; }
-    virtual bool	Dispatch (Msg& msg) noexcept override;
+    bool		Dispatch (Msg& msg) noexcept override;
     void		QueueOutgoing (Msg&& msg) noexcept;
     static Extern*	LookupById (mrid_t id) noexcept;
     static Extern*	LookupByImported (iid_t id) noexcept;
@@ -311,9 +311,9 @@ class ExternServer : public Msger {
     enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
 public:
     explicit		ExternServer (const Msg::Link& l) noexcept;
-    virtual bool	OnError (mrid_t eid, const string& errmsg) noexcept override;
-    virtual void	OnMsgerDestroyed (mrid_t mid) noexcept override;
-    virtual bool	Dispatch (Msg& msg) noexcept override;
+    bool		OnError (mrid_t eid, const string& errmsg) noexcept override;
+    void		OnMsgerDestroyed (mrid_t mid) noexcept override;
+    bool		Dispatch (Msg& msg) noexcept override;
     inline void		TimerR_Timer (int) noexcept;
     inline void		ExternServer_Open (int fd, const iid_t* eifaces, bool closeWhenEmpty) noexcept;
     inline void		ExternServer_Close (void) noexcept;

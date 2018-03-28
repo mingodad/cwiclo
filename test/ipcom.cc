@@ -14,13 +14,13 @@
 class TestApp : public App {
 public:
     static auto&	Instance (void) noexcept { static TestApp s_App; return s_App; }
-    virtual bool	Dispatch (Msg& msg) noexcept override {
+    bool		Dispatch (Msg& msg) noexcept override {
 			    return PPingR::Dispatch (this, msg)
 				|| PExternR::Dispatch (this, msg)
 				|| PSignal::Dispatch (this, msg)
 				|| App::Dispatch (msg);
 			}
-    virtual void	OnMsgerDestroyed (mrid_t mid) noexcept override;
+    void		OnMsgerDestroyed (mrid_t mid) noexcept override;
     void		ProcessArgs (argc_t argc, argv_t argv) noexcept;
     inline void		ExternR_Connected (const ExternInfo* einfo) noexcept;
     inline void		PingR_Ping (uint32_t v) noexcept;

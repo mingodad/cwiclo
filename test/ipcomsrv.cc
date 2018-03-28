@@ -14,7 +14,7 @@ class TestApp : public App {
 public:
     static auto&	Instance (void) { static TestApp s_App; return s_App; }
     void		ProcessArgs (argc_t argc, argv_t argv) noexcept;
-    virtual bool	Dispatch (Msg& msg) noexcept override
+    bool		Dispatch (Msg& msg) noexcept override
 			    { return PExternR::Dispatch (this, msg) || App::Dispatch (msg); }
     inline void		ExternR_Connected (const ExternInfo*) noexcept;
 private:
