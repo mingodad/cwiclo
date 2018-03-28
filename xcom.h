@@ -276,12 +276,12 @@ class PExternServer : public Proxy {
     DECLARE_INTERFACE (ExternServer, (Open,"xib")(Close,""))
 public:
     using fd_t = PExtern::fd_t;
-    enum ECloseWhenEmpty : bool { RemainWhenEmpty, CloseWhenEmpty };
+    enum class WhenEmpty : bool { Remain, Close };
 public:
     explicit	PExternServer (mrid_t caller)	: Proxy(caller),_sockname(nullptr) {}
 		~PExternServer (void) noexcept;
     void	Close (void)			{ Send (M_Close()); }
-    void	Open (fd_t fd, const iid_t* eifaces, ECloseWhenEmpty closeWhenEmpty = CloseWhenEmpty)
+    void	Open (fd_t fd, const iid_t* eifaces, WhenEmpty closeWhenEmpty = WhenEmpty::Close)
 		    { Send (M_Open(), eifaces, fd, closeWhenEmpty); }
     fd_t	Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) noexcept NONNULL();
     fd_t	BindLocal (const char* path, const iid_t* eifaces) noexcept NONNULL();
@@ -297,7 +297,7 @@ public:
 	    auto is = msg.Read();
 	    auto eifaces = is.readv<const iid_t*>();
 	    auto fd = is.readv<fd_t>();
-	    auto closeWhenEmpty = is.readv<ECloseWhenEmpty>();
+	    auto closeWhenEmpty = is.readv<WhenEmpty>();
 	    o->ExternServer_Open (fd, eifaces, closeWhenEmpty);
 	} else if (msg.Method() == M_Close())
 	    o->ExternServer_Close();
@@ -320,7 +320,7 @@ public:
     void		OnMsgerDestroyed (mrid_t mid) noexcept override;
     bool		Dispatch (Msg& msg) noexcept override;
     inline void		TimerR_Timer (PTimer::fd_t) noexcept;
-    inline void		ExternServer_Open (PTimer::fd_t fd, const iid_t* eifaces, bool closeWhenEmpty) noexcept;
+    inline void		ExternServer_Open (PTimer::fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty) noexcept;
     inline void		ExternServer_Close (void) noexcept;
     inline void		ExternR_Connected (const ExternInfo* einfo) noexcept;
 private:

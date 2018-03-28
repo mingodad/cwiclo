@@ -850,7 +850,7 @@ int PExternServer::Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* e
 	    free (_sockname);
 	_sockname = strdup (((const sockaddr_un*)addr)->sun_path);
     }
-    Open (fd, eifaces, RemainWhenEmpty);
+    Open (fd, eifaces, WhenEmpty::Remain);
     return fd;
 }
 
@@ -997,14 +997,14 @@ void ExternServer::TimerR_Timer (PTimer::fd_t) noexcept
     }
 }
 
-void ExternServer::ExternServer_Open (int fd, const iid_t* eifaces, bool closeWhenEmpty) noexcept
+void ExternServer::ExternServer_Open (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty) noexcept
 {
     assert (_sockfd == -1 && "each ExternServer instance can only listen to one socket");
     if (0 > fcntl (fd, F_SETFL, O_NONBLOCK| fcntl (fd, F_GETFL)))
 	return ErrorLibc ("fcntl(SETFL(O_NONBLOCK))");
     _sockfd = fd;
     _eifaces = eifaces;
-    SetFlag (f_CloseWhenEmpty, closeWhenEmpty);
+    SetFlag (f_CloseWhenEmpty, closeWhenEmpty != PExternServer::WhenEmpty::Remain);
     TimerR_Timer (_sockfd);
 }
 
