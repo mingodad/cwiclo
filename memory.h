@@ -568,7 +568,7 @@ void sort (Container& c)
 template <typename Container, typename Discriminator>
 void remove_if (Container& ctr, Discriminator f)
 {
-    foreach (i, ctr)
+    for (auto i = ctr.cbegin(); i < ctr.cend(); ++i)
 	if (f(*i))
 	    --(i = ctr.erase(i));
 }
