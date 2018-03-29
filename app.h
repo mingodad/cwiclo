@@ -140,7 +140,7 @@ public:
 protected:
     inline		App (void) noexcept;
 			~App (void) noexcept override;
-    static void		FatalSignalHandler (int sig) noexcept;
+    [[noreturn]] static void FatalSignalHandler (int sig) noexcept;
     static void		MsgSignalHandler (int sig) noexcept;
 private:
     //{{{2 Msgerp ------------------------------------------------------
@@ -209,7 +209,7 @@ public:
 	PTimer::mstime_t	_nextfire;
 	PTimerR			_reply;
 	PTimer::WatchCmd	_cmd;
-	int			_fd;
+	PTimer::fd_t		_fd;
     };
     //}}}2--------------------------------------------------------------
 private:
@@ -228,7 +228,7 @@ private:
     inline void		DeleteUnusedMsgers (void) noexcept;
     inline void		ForwardReceivedSignals (void) noexcept;
     void		AddTimer (Timer* t)	{ _timers.push_back(t); }
-    void		RemoveTimer (Timer* t)	{ foreach (i, _timers) if (*i == t) --(i=_timers.erase(i)); }
+    void		RemoveTimer (Timer* t)	{ remove_if (_timers, [&](auto i){ return i == t; }); }
     inline void		RunTimers (void) noexcept;
 private:
     msgq_t		_outq;

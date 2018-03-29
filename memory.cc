@@ -134,30 +134,23 @@ extern "C" void print_backtrace (void) noexcept
 }
 
 #ifndef UC_VERSION
-static inline char _num_to_digit (uint8_t b)
-{
-    char d = (b & 0xF) + '0';
-    return d <= '9' ? d : d+('A'-'0'-10);
-}
-static inline bool _printable (char c)
-{
-    return c >= 32 && c < 127;
-}
 extern "C" void hexdump (const void* vp, size_t n) noexcept
 {
     auto p = (const uint8_t*) vp;
-    char line[65]; line[64] = 0;
     for (size_t i = 0; i < n; i += 16) {
-	memset (line, ' ', sizeof(line)-1);
-	for (size_t h = 0; h < 16; ++h) {
-	    if (i+h < n) {
-		uint8_t b = p[i+h];
-		line[h*3] = _num_to_digit(b>>4);
-		line[h*3+1] = _num_to_digit(b);
-		line[h+3*16] = _printable(b) ? b : '.';
-	    }
+	for (auto j = 0u; j < 16; ++j) {
+	    if (i+j < n)
+		printf ("%02x ", p[i+j]);
+	    else
+		printf ("   ");
 	}
-	puts (line);
+	for (auto j = 0u; j < 16; ++j) {
+	    if (i+j < n && p[i+j] >= ' ' && p[i+j] <= '~')
+		printf ("%c", p[i+j]);
+	    else
+		printf (" ");
+	}
+	printf ("\n");
     }
 }
 
@@ -167,7 +160,7 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
 {
     if (efn[0] == '/' || (efn[0] == '.' && (efn[1] == '/' || efn[1] == '.'))) {
 	if (0 != access (efn, X_OK))
-	    return NULL;
+	    return nullptr;
 	return efn;
     }
 
@@ -178,22 +171,23 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
     snprintf (ArrayBlock(path), "%s/%s"+3, penv);
 
     for (char *pf = path, *pl = pf; *pf; pf = pl) {
-	while (*pl && *pl != ':') ++pl;
+	while (*pl && *pl != ':')
+	    ++pl;
 	*pl++ = 0;
 	snprintf (exe, exesz, "%s/%s", pf, efn);
 	if (0 == access (exe, X_OK))
 	    return exe;
     }
-    return NULL;
+    return nullptr;
 }
 
 unsigned sd_listen_fds (void) noexcept
 {
     const char* e = getenv("LISTEN_PID");
-    if (!e || getpid() != (pid_t) strtoul(e, NULL, 10))
+    if (!e || getpid() != (pid_t) strtoul (e, nullptr, 10))
 	return 0;
     e = getenv("LISTEN_FDS");
-    return e ? strtoul (e, NULL, 10) : 0;
+    return e ? strtoul (e, nullptr, 10) : 0;
 }
 
 int mkpath (const char* path, mode_t mode) noexcept
@@ -213,7 +207,7 @@ int mkpath (const char* path, mode_t mode) noexcept
 int rmpath (const char* path) noexcept
 {
     char pbuf [PATH_MAX];
-    for (char* pend = stpcpy (pbuf, path)-1;; *pend = 0) {
+    for (auto pend = stpcpy (pbuf, path)-1;; *pend = 0) {
 	if (0 > rmdir(pbuf))
 	    return (errno == ENOTEMPTY || errno == EACCES) ? 0 : -1;
 	do {

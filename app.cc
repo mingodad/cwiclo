@@ -298,7 +298,7 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
     // Note that there may be a timeout without any fds
     //
     auto npfd = 0u;
-    PTimer::mstime_t nearest = PTimer::TimerMax;
+    auto nearest = PTimer::TimerMax;
     for (auto t : _timers) {
 	if (t->Cmd() == PTimer::WatchCmd::Stop)
 	    continue;

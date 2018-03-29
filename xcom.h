@@ -47,13 +47,14 @@ class PExtern : public Proxy {
     DECLARE_INTERFACE (Extern, (Open,"xib")(Close,""))
 public:
     using fd_t = PTimer::fd_t;
+    enum class SocketSide : bool { Client, Server };
 public:
     explicit	PExtern (mrid_t caller)	: Proxy(caller) {}
 		~PExtern (void)		{ FreeId(); }
     void	Close (void)		{ Send (M_Close()); }
-    void	Open (fd_t fd, const iid_t* eifaces, bool isServer = true)
-		    { Send (M_Open(), eifaces, fd, isServer); }
-    void	Open (fd_t fd)		{ Open (fd, nullptr, false); }
+    void	Open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server)
+		    { Send (M_Open(), eifaces, fd, side); }
+    void	Open (fd_t fd)		{ Open (fd, nullptr, SocketSide::Client); }
     fd_t	Connect (const sockaddr* addr, socklen_t addrlen) noexcept;
     fd_t	ConnectIP4 (in_addr_t ip, in_port_t port) noexcept;
     fd_t	ConnectIP6 (in6_addr ip, in_port_t port) noexcept;
@@ -69,8 +70,8 @@ public:
 	    auto is = msg.Read();
 	    auto eifaces = is.readv<const iid_t*>();
 	    auto fd = is.readv<fd_t>();
-	    auto isServer = is.readv<bool>();
-	    o->Extern_Open (fd, eifaces, isServer);
+	    auto side = is.readv<SocketSide>();
+	    o->Extern_Open (fd, eifaces, side);
 	} else if (msg.Method() == M_Close())
 	    o->Extern_Close();
 	else
@@ -83,11 +84,12 @@ public:
 //{{{ ExternInfo
 
 struct ExternInfo {
+    using SocketSide = PExtern::SocketSide;
     vector<iid_t>	imported;
     const iid_t*	exported;
     struct ucred	creds;
     mrid_t		oid;
-    bool		isServer;
+    SocketSide		side;
     bool		isUnixSocket;
 public:
     auto IsImporting (iid_t iid) const
@@ -143,6 +145,8 @@ private:
 //{{{ Extern
 
 class Extern : public Msger {
+public:
+    using fd_t = PExtern::fd_t;
 protected:
     enum {
 	// Each extern connection has two sides and each side must be able
@@ -174,12 +178,12 @@ public:
     static Extern*	LookupByRelayId (mrid_t rid) noexcept;
     mrid_t		RegisterRelay (const COMRelay* relay) noexcept;
     void		UnregisterRelay (const COMRelay* relay) noexcept;
-    inline void		Extern_Open (PExtern::fd_t fd, const iid_t* eifaces, bool isServer) noexcept;
+    inline void		Extern_Open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side) noexcept;
     void		Extern_Close (void) noexcept;
     inline void		COM_Error (const lstring& errmsg) noexcept;
     inline void		COM_Export (string elist) noexcept;
     inline void		COM_Delete (void) noexcept;
-    void		TimerR_Timer (PTimer::fd_t fd) noexcept;
+    void		TimerR_Timer (fd_t fd) noexcept;
 private:
     //{{{2 ExtMsg ------------------------------------------------------
     // Message formatted for reading/writing to socket
@@ -210,15 +214,15 @@ private:
 	void		ResizeBody (streamsize sz)	{ _body.resize (sz); }
 	void		TrimBody (streamsize sz)	{ _body.memlink::resize (sz); }
 	auto&&		MoveBody (void)			{ return move(_body); }
-	void		SetPassedFd (PExtern::fd_t fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
-	PExtern::fd_t	PassedFd (void) const noexcept;
+	void		SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
+	fd_t		PassedFd (void) const noexcept;
 	void		WriteIOVecs (iovec* iov, streamsize bw) noexcept;
-	istream		Read (void) const	{ return istream (_body.data(), _body.size()); }
+	auto		Read (void) const	{ return istream (_body.data(), _body.size()); }
 	methodid_t	ParseMethod (void) const noexcept;
 	inline void	DebugDump (void) const noexcept;
     private:
-	const char*	HeaderPtr (void) const	{ auto hp = _hbuf; return hp-sizeof(_h); }
-	char*		HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr); }
+	auto		HeaderPtr (void) const	{ auto hp = _hbuf; return hp-sizeof(_h); }
+	auto		HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr); }
 	uint8_t		WriteHeaderStrings (methodid_t method) noexcept;
     private:
 	memblock	_body;
@@ -238,7 +242,7 @@ private:
     //}}}2--------------------------------------------------------------
 private:
     mrid_t		CreateExtidFromRelayId (mrid_t id) const noexcept
-			    { return id + (_einfo.isServer ? extid_ServerBase : extid_ClientBase); }
+			    { return id + ((_einfo.side == ExternInfo::SocketSide::Client) ? extid_ClientBase : extid_ServerBase); }
     static auto&	ExternList (void) noexcept
 			    { static vector<Extern*> s_ExternList; return s_ExternList; }
     RelayProxy*		RelayProxyByExtid (mrid_t extid) noexcept;
@@ -246,10 +250,10 @@ private:
     bool		WriteOutgoing (void) noexcept;
     void		ReadIncoming (void) noexcept;
     inline bool		AcceptIncomingMessage (void) noexcept;
-    inline bool		ValidateSocket (PExtern::fd_t fd) noexcept;
-    void		EnableCredentialsPassing (int enable) noexcept;
+    inline bool		AttachToSocket (fd_t fd) noexcept;
+    void		EnableCredentialsPassing (bool enable) noexcept;
 private:
-    PExtern::fd_t	_sockfd;
+    fd_t		_sockfd;
     PTimer		_timer;
     PExternR		_reply;
     streamsize		_bwritten;
@@ -258,7 +262,7 @@ private:
     ExternInfo		_einfo;
     streamsize		_bread;
     ExtMsg		_inmsg;		// currently incoming message
-    PExtern::fd_t	_infd;
+    fd_t		_infd;
 };
 
 #define REGISTER_EXTERNS\
@@ -278,7 +282,7 @@ public:
     using fd_t = PExtern::fd_t;
     enum class WhenEmpty : bool { Remain, Close };
 public:
-    explicit	PExternServer (mrid_t caller)	: Proxy(caller),_sockname(nullptr) {}
+    explicit	PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
 		~PExternServer (void) noexcept;
     void	Close (void)			{ Send (M_Close()); }
     void	Open (fd_t fd, const iid_t* eifaces, WhenEmpty closeWhenEmpty = WhenEmpty::Close)
@@ -292,7 +296,7 @@ public:
     fd_t	BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
     fd_t	BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
     template <typename O>
-    inline static bool	Dispatch (O* o, const Msg& msg) noexcept {
+    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Open()) {
 	    auto is = msg.Read();
 	    auto eifaces = is.readv<const iid_t*>();
@@ -306,7 +310,7 @@ public:
 	return true;
     }
 private:
-    char*	_sockname;
+    string	_sockname;
 };
 
 //}}}-------------------------------------------------------------------
@@ -315,20 +319,22 @@ private:
 class ExternServer : public Msger {
     enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
 public:
+    using fd_t = PExternServer::fd_t;
+public:
     explicit		ExternServer (const Msg::Link& l) noexcept;
     bool		OnError (mrid_t eid, const string& errmsg) noexcept override;
     void		OnMsgerDestroyed (mrid_t mid) noexcept override;
     bool		Dispatch (Msg& msg) noexcept override;
-    inline void		TimerR_Timer (PTimer::fd_t) noexcept;
-    inline void		ExternServer_Open (PTimer::fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty) noexcept;
+    inline void		TimerR_Timer (fd_t) noexcept;
+    inline void		ExternServer_Open (fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty) noexcept;
     inline void		ExternServer_Close (void) noexcept;
     inline void		ExternR_Connected (const ExternInfo* einfo) noexcept;
 private:
+    vector<PExtern>	_conns;
+    const iid_t*	_eifaces;
     PTimer		_timer;
     PExternR		_reply;
-    PTimer::fd_t	_sockfd;
-    const iid_t*	_eifaces;
-    vector<PExtern>	_conns;
+    fd_t		_sockfd;
 };
 
 } // namespace cwiclo

@@ -49,9 +49,9 @@ Msg PCOM::ErrorMsg (mrid_t extid, const string& errmsg) noexcept // static
 
 DEFINE_INTERFACE (Extern)
 
-int PExtern::Connect (const sockaddr* addr, socklen_t addrlen) noexcept
+auto PExtern::Connect (const sockaddr* addr, socklen_t addrlen) noexcept -> fd_t
 {
-    int fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
+    auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
     if (fd < 0)
 	return fd;
     if (0 > connect (fd, addr, addrlen) && errno != EINPROGRESS && errno != EINTR) {
@@ -64,7 +64,7 @@ int PExtern::Connect (const sockaddr* addr, socklen_t addrlen) noexcept
 }
 
 /// Create local socket with given path
-int PExtern::ConnectLocal (const char* path) noexcept
+auto PExtern::ConnectLocal (const char* path) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -77,7 +77,7 @@ int PExtern::ConnectLocal (const char* path) noexcept
 }
 
 /// Create local socket of the given name in the system standard location for such
-int PExtern::ConnectSystemLocal (const char* sockname) noexcept
+auto PExtern::ConnectSystemLocal (const char* sockname) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -90,7 +90,7 @@ int PExtern::ConnectSystemLocal (const char* sockname) noexcept
 }
 
 /// Create local socket of the given name in the user standard location for such
-int PExtern::ConnectUserLocal (const char* sockname) noexcept
+auto PExtern::ConnectUserLocal (const char* sockname) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -105,7 +105,7 @@ int PExtern::ConnectUserLocal (const char* sockname) noexcept
     return Connect ((const sockaddr*) &addr, sizeof(addr));
 }
 
-int PExtern::ConnectIP4 (in_addr_t ip, in_port_t port) noexcept
+auto PExtern::ConnectIP4 (in_addr_t ip, in_port_t port) noexcept -> fd_t
 {
     sockaddr_in addr = {};
     addr.sin_family = PF_INET;
@@ -127,11 +127,11 @@ int PExtern::ConnectIP4 (in_addr_t ip, in_port_t port) noexcept
 }
 
 /// Create local IPv4 socket at given port on the loopback interface
-int PExtern::ConnectLocalIP4 (in_port_t port) noexcept
+auto PExtern::ConnectLocalIP4 (in_port_t port) noexcept -> fd_t
     { return PExtern::ConnectIP4 (INADDR_LOOPBACK, port); }
 
 /// Create local IPv6 socket at given ip and port
-int PExtern::ConnectIP6 (in6_addr ip, in_port_t port) noexcept
+auto PExtern::ConnectIP6 (in6_addr ip, in_port_t port) noexcept -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -145,7 +145,7 @@ int PExtern::ConnectIP6 (in6_addr ip, in_port_t port) noexcept
 }
 
 /// Create local IPv6 socket at given ip and port
-int PExtern::ConnectLocalIP6 (in_port_t port) noexcept
+auto PExtern::ConnectLocalIP6 (in_port_t port) noexcept -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -155,11 +155,11 @@ int PExtern::ConnectLocalIP6 (in_port_t port) noexcept
     return Connect ((const sockaddr*) &addr, sizeof(addr));
 }
 
-int PExtern::LaunchPipe (const char* exe, const char* arg) noexcept
+auto PExtern::LaunchPipe (const char* exe, const char* arg) noexcept -> fd_t
 {
     // Check if executable exists before the fork to allow proper error handling
     char exepath [PATH_MAX];
-    const char* exefp = executable_in_path (exe, ArrayBlock(exepath));
+    auto exefp = executable_in_path (exe, ArrayBlock(exepath));
     if (!exefp) {
 	errno = ENOENT;
 	return -1;
@@ -167,17 +167,15 @@ int PExtern::LaunchPipe (const char* exe, const char* arg) noexcept
 
     // Create socket pipe, will be connected to stdin in server
     enum { socket_ClientSide, socket_ServerSide, socket_N };
-    int socks [socket_N];
+    fd_t socks [socket_N];
     if (0 > socketpair (PF_LOCAL, SOCK_STREAM| SOCK_NONBLOCK, 0, socks))
 	return -1;
 
-    int fr = fork();
-    if (fr < 0) {
+    if (auto fr = fork(); fr < 0) {
 	close (socks[socket_ClientSide]);
 	close (socks[socket_ServerSide]);
 	return -1;
-    }
-    if (fr == 0) {	// Server side
+    } else if (!fr) {	// Server side
 	close (socks[socket_ClientSide]);
 	dup2 (socks[socket_ServerSide], STDIN_FILENO);
 	execl (exefp, exe, arg, NULL);
@@ -240,13 +238,13 @@ void Extern::QueueOutgoing (Msg&& msg) noexcept
 
 Extern::RelayProxy* Extern::RelayProxyById (mrid_t id) noexcept
 {
-    return linear_search_if (_relays, [&](const RelayProxy& r)
+    return linear_search_if (_relays, [&](const auto& r)
 	    { return r.relay.Dest() == id; });
 }
 
 Extern::RelayProxy* Extern::RelayProxyByExtid (mrid_t extid) noexcept
 {
-    return linear_search_if (_relays, [&](const RelayProxy& r)
+    return linear_search_if (_relays, [&](const auto& r)
 	    { return r.extid == extid; });
 }
 
@@ -268,21 +266,21 @@ void Extern::UnregisterRelay (const COMRelay* relay) noexcept
 
 Extern* Extern::LookupById (mrid_t id) noexcept // static
 {
-    auto ep = linear_search_if (ExternList(), [&](auto e)
+    auto ep = linear_search_if (ExternList(), [&](const auto e)
 		{ return e->MsgerId() == id; });
     return ep ? *ep : nullptr;
 }
 
 Extern* Extern::LookupByImported (iid_t iid) noexcept // static
 {
-    auto ep = linear_search_if (ExternList(), [&](auto e)
+    auto ep = linear_search_if (ExternList(), [&](const auto e)
 		{ return e->Info().IsImporting(iid); });
     return ep ? *ep : nullptr;
 }
 
 Extern* Extern::LookupByRelayId (mrid_t rid) noexcept // static
 {
-    auto ep = linear_search_if (ExternList(), [&](auto e)
+    auto ep = linear_search_if (ExternList(), [&](const auto e)
 		{ return nullptr != e->RelayProxyById (rid); });
     return ep ? *ep : nullptr;
 }
@@ -334,7 +332,7 @@ void Extern::ExtMsg::WriteIOVecs (iovec* iov, streamsize bw) noexcept
     iov[1].iov_len = _h.sz - bw;
 }
 
-int Extern::ExtMsg::PassedFd (void) const noexcept
+auto Extern::ExtMsg::PassedFd (void) const noexcept -> fd_t
 {
     if (!HasFd())
 	return -1;
@@ -372,13 +370,13 @@ void Extern::ExtMsg::DebugDump (void) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::Extern
 
-void Extern::Extern_Open (int fd, const iid_t* eifaces, bool isServer) noexcept
+void Extern::Extern_Open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side) noexcept
 {
-    if (!ValidateSocket (fd))
+    if (!AttachToSocket (fd))
 	return Error ("invalid socket type");
     _sockfd = fd;
     _einfo.exported = eifaces;
-    _einfo.isServer = isServer;
+    _einfo.side = side;
     EnableCredentialsPassing (true);
     // Initial handshake is an exchange of COM::Export messages
     QueueOutgoing (PCOM::ExportMsg (extid_COM, eifaces));
@@ -386,13 +384,11 @@ void Extern::Extern_Open (int fd, const iid_t* eifaces, bool isServer) noexcept
 
 void Extern::Extern_Close (void) noexcept
 {
-    auto fd = _sockfd;
-    _sockfd = -1;
-    close (fd);
     SetFlag (f_Unused);
+    close (exchange (_sockfd, -1));
 }
 
-bool Extern::ValidateSocket (int fd) noexcept
+bool Extern::AttachToSocket (fd_t fd) noexcept
 {
     // The incoming socket must be a stream socket
     int v;
@@ -412,19 +408,19 @@ bool Extern::ValidateSocket (int fd) noexcept
 	return false;
 
     // If matches, need to set the fd nonblocking for the poll loop to work
-    int f = fcntl (fd, F_GETFL);
-    if (f < 0)
+    if (auto f = fcntl (fd, F_GETFL); f < 0)
 	return false;
-    if (0 > fcntl (fd, F_SETFL, f| O_NONBLOCK| O_CLOEXEC))
+    else if (0 > fcntl (fd, F_SETFL, f| O_NONBLOCK| O_CLOEXEC))
 	return false;
     return true;
 }
 
-void Extern::EnableCredentialsPassing (int enable) noexcept
+void Extern::EnableCredentialsPassing (bool enable) noexcept
 {
     if (_sockfd < 0 || !_einfo.isUnixSocket)
 	return;
-    if (0 > setsockopt (_sockfd, SOL_SOCKET, SO_PASSCRED, &enable, sizeof(enable)))
+    int sov = enable;
+    if (0 > setsockopt (_sockfd, SOL_SOCKET, SO_PASSCRED, &sov, sizeof(sov)))
 	return ErrorLibc ("setsockopt(SO_PASSCRED)");
 }
 
@@ -463,7 +459,7 @@ void Extern::COM_Delete (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::Timer
 
-void Extern::TimerR_Timer (PTimer::fd_t) noexcept
+void Extern::TimerR_Timer (fd_t) noexcept
 {
     if (_sockfd >= 0)
 	ReadIncoming();
@@ -486,16 +482,16 @@ bool Extern::WriteOutgoing (void) noexcept
 
 	// Add fd if being passed
 	char fdbuf [CMSG_SPACE(sizeof(int))] = {};
-	int passedfd = _outq.front().PassedFd();
+	auto passedfd = _outq.front().PassedFd();
 	unsigned nm = (passedfd >= 0);
 	if (nm && !_bwritten) {	// only the first write passes the fd
 	    mh.msg_control = fdbuf;
 	    mh.msg_controllen = sizeof(fdbuf);
-	    cmsghdr* cmsg = CMSG_FIRSTHDR(&mh);
+	    auto cmsg = CMSG_FIRSTHDR(&mh);
 	    cmsg->cmsg_len = sizeof(fdbuf);
 	    cmsg->cmsg_level = SOL_SOCKET;
 	    cmsg->cmsg_type = SCM_RIGHTS;
-	    ostream fdos ((ostream::pointer) CMSG_DATA (cmsg), sizeof(int));
+	    ostream fdos ((ostream::pointer) CMSG_DATA (cmsg), sizeof(passedfd));
 	    fdos << passedfd;
 	}
 
@@ -512,23 +508,21 @@ bool Extern::WriteOutgoing (void) noexcept
 	    _outq[m].WriteIOVecs (&iov[2*m], bw);
 
 	// And try writing it all
-	int smr = sendmsg (_sockfd, &mh, MSG_NOSIGNAL);
-	if (smr <= 0) {
+	if (auto smr = sendmsg (_sockfd, &mh, MSG_NOSIGNAL); smr <= 0) {
 	    if (!smr || errno == ECONNRESET)	// smr == 0 when remote end closes. No error then, just need to close this end too.
 		DEBUG_PRINTF ("[X] %hu.Extern: wsocket %d closed by the other end\n", MsgerId(), _sockfd);
-	    else {
-		if (errno == EINTR)
-		    continue;
-		if (errno == EAGAIN)
-		    return true;
+	    else if (errno == EINTR)
+		continue;
+	    else if (errno == EAGAIN)
+		return true;
+	    else
 		ErrorLibc ("sendmsg");
-	    }
 	    Extern_Close();
 	    return false;
+	} else { // At this point sendmsg has succeeded and wrote some bytes
+	    DEBUG_PRINTF ("[X] Wrote %ld bytes to socket %d\n", smr, _sockfd);
+	    _bwritten += smr;
 	}
-	// At this point sendmsg has succeeded and wrote some bytes
-	DEBUG_PRINTF ("[X] Wrote %d bytes to socket %d\n", smr, _sockfd);
-	_bwritten += smr;
 
 	// Close the fd once successfully passed
 	if (passedfd >= 0)
@@ -562,7 +556,7 @@ void Extern::ReadIncoming (void) noexcept
 	_inmsg.WriteIOVecs (iov, _bread);
 
 	// Ancillary space for fd and credentials
-	char cmsgbuf [CMSG_SPACE(sizeof(int)) + CMSG_SPACE(sizeof(ucred))] = {};
+	char cmsgbuf [CMSG_SPACE(sizeof(_infd)) + CMSG_SPACE(sizeof(ucred))] = {};
 
 	// Build struct for recvmsg
 	msghdr mh = {};
@@ -572,24 +566,23 @@ void Extern::ReadIncoming (void) noexcept
 	mh.msg_controllen = sizeof(cmsgbuf);
 
 	// Receive some data
-	int rmr = recvmsg (_sockfd, &mh, 0);
-	if (rmr <= 0) {
+	if (auto rmr = recvmsg (_sockfd, &mh, 0); rmr <= 0) {
 	    if (!rmr || errno == ECONNRESET)	// br == 0 when remote end closes. No error then, just need to close this end too.
 		DEBUG_PRINTF ("[X] %hu.Extern: rsocket %d closed by the other end\n", MsgerId(), _sockfd);
-	    else {
-		if (errno == EINTR)
-		    continue;
-		if (errno == EAGAIN)
-		    return;	// this is the exit point
+	    else if (errno == EINTR)
+		continue;
+	    else if (errno == EAGAIN)
+		return;			// <--- the usual exit point
+	    else
 		ErrorLibc ("recvmsg");
-	    }
 	    return Extern_Close();
+	} else {
+	    DEBUG_PRINTF ("[X] %hu.Extern: read %ld bytes from socket %d\n", MsgerId(), rmr, _sockfd);
+	    _bread += rmr;
 	}
-	DEBUG_PRINTF ("[X] %hu.Extern: read %d bytes from socket %d\n", MsgerId(), rmr, _sockfd);
-	_bread += rmr;
 
 	// Check if ancillary data was passed
-	for (cmsghdr* cmsg = CMSG_FIRSTHDR(&mh); cmsg; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
+	for (auto cmsg = CMSG_FIRSTHDR(&mh); cmsg; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
 	    if (cmsg->cmsg_type == SCM_CREDENTIALS) {
 		istream is ((istream::pointer) CMSG_DATA(cmsg), sizeof(ucred));
 		is >> _einfo.creds;
@@ -600,7 +593,7 @@ void Extern::ReadIncoming (void) noexcept
 		    Error ("multiple file descriptors received in one message");
 		    return Extern_Close();
 		}
-		istream is ((istream::pointer) CMSG_DATA(cmsg), sizeof(int));
+		istream is ((istream::pointer) CMSG_DATA(cmsg), sizeof(_infd));
 		is >> _infd;
 		DEBUG_PRINTF ("[X] Received fd %d\n", _infd);
 	    }
@@ -639,7 +632,7 @@ void Extern::ReadIncoming (void) noexcept
 		    || !IsAligned (h.sz, Msg::BODY_ALIGNMENT)
 		    || (h.fdoffset != Msg::NO_FD_INCLUDED
 			&& (_infd < 0	// the fd must be passed at this point
-			    || h.fdoffset+sizeof(int) > h.sz
+			    || h.fdoffset+sizeof(_infd) > h.sz
 			    || !IsAligned (h.fdoffset, Msg::FD_ALIGNMENT)))
 		    || h.extid > extid_ServerLast) {
 		Error ("invalid message");
@@ -675,7 +668,7 @@ bool Extern::AcceptIncomingMessage (void) noexcept
 	    return false;
 	}
 	// Verify that the other side sets extid correctly
-	if (_einfo.isServer ^ (_inmsg.Extid() < extid_ServerBase)) {
+	if (bool(_einfo.side) ^ (_inmsg.Extid() < extid_ServerBase)) {
 	    DEBUG_PRINTF ("[XE] Extern connection peer allocates incorrect extids\n");
 	    return false;
 	}
@@ -750,8 +743,14 @@ bool COMRelay::Dispatch (Msg& msg) noexcept
     }
     // Now that the interface is known and extern pointer is available,
     // the relay can register and obtain a connection extid.
-    if (!_extid)
+    if (!_extid) {
 	_extid = _pExtern->RegisterRelay (this);
+	//
+	// If remote object was marked unused, but the local caller has recreated it
+	// through this same relay before it was destroyed, f_Unused needs to be reset.
+	//
+	SetFlag (f_Unused, false);
+    }
 
     // Forward the message in the direction opposite which it was received
     if (msg.Src() == _localp.Dest()) {
@@ -769,6 +768,7 @@ bool COMRelay::OnError (mrid_t eid, const string& errmsg) noexcept
     // An unhandled error in the local object is forwarded to the remote
     // object. At this point it will be considered handled. The remote
     // will decide whether to delete itself, which will propagate here.
+    //
     if (_pExtern && eid == _localp.Dest()) {
 	DEBUG_PRINTF ("[X] COMRelay forwarding error to extern creator\n");
 	_pExtern->QueueOutgoing (PCOM::ErrorMsg (_extid, errmsg));
@@ -786,6 +786,7 @@ void COMRelay::OnMsgerDestroyed (mrid_t id) noexcept
     // Msgers will be manually notified by the Extern being deleted. In the
     // first case, the Extern object is available to send the COM Destroy
     // notification, in the second, it is not.
+    //
     if (id != _localp.Dest())
 	_pExtern = nullptr;	// when not, do not try to send the message
 
@@ -798,9 +799,12 @@ void COMRelay::COM_Error (const lstring& errmsg) noexcept
     // COM_Error is received for errors in the remote object. The remote
     // object is destroyed and COM_Delete will shortly follow. Here, create
     // a local error and send it to the local object.
+    //
     Error ("%s", errmsg.c_str());
+ 
     // Because the local object may not be the creator of this relay, the
     // error must be forwarded there manually.
+    //
     App::Instance().ForwardError (_localp.Dest(), _localp.Src());
 }
 
@@ -822,17 +826,14 @@ void COMRelay::COM_Delete (void) noexcept
 
 PExternServer::~PExternServer (void) noexcept
 {
-    if (_sockname) {
-	unlink (_sockname);
-	free (_sockname);
-	_sockname = nullptr;
-    }
+    if (!_sockname.empty())
+	unlink (_sockname.c_str());
 }
 
 /// Create server socket bound to the given address
-int PExternServer::Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) noexcept
+auto PExternServer::Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) noexcept -> fd_t
 {
-    int fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
+    auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
     if (fd < 0)
 	return fd;
     if (0 > bind (fd, addr, addrlen) && errno != EINPROGRESS) {
@@ -845,17 +846,14 @@ int PExternServer::Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* e
 	close (fd);
 	return -1;
     }
-    if (addr->sa_family == PF_LOCAL) {
-	if (_sockname)
-	    free (_sockname);
-	_sockname = strdup (((const sockaddr_un*)addr)->sun_path);
-    }
+    if (addr->sa_family == PF_LOCAL)
+	_sockname = ((const sockaddr_un*)addr)->sun_path;
     Open (fd, eifaces, WhenEmpty::Remain);
     return fd;
 }
 
 /// Create local socket with given path
-int PExternServer::BindLocal (const char* path, const iid_t* eifaces) noexcept
+auto PExternServer::BindLocal (const char* path, const iid_t* eifaces) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -864,14 +862,14 @@ int PExternServer::BindLocal (const char* path, const iid_t* eifaces) noexcept
 	return -1;
     }
     DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    int fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    auto fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
     if (0 > chmod (addr.sun_path, DEFFILEMODE))
 	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
     return fd;
 }
 
 /// Create local socket of the given name in the system standard location for such
-int PExternServer::BindSystemLocal (const char* sockname, const iid_t* eifaces) noexcept
+auto PExternServer::BindSystemLocal (const char* sockname, const iid_t* eifaces) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -880,14 +878,14 @@ int PExternServer::BindSystemLocal (const char* sockname, const iid_t* eifaces) 
 	return -1;
     }
     DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    int fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    auto fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
     if (0 > chmod (addr.sun_path, DEFFILEMODE))
 	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
     return fd;
 }
 
 /// Create local socket of the given name in the user standard location for such
-int PExternServer::BindUserLocal (const char* sockname, const iid_t* eifaces) noexcept
+auto PExternServer::BindUserLocal (const char* sockname, const iid_t* eifaces) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -899,14 +897,14 @@ int PExternServer::BindUserLocal (const char* sockname, const iid_t* eifaces) no
 	return -1;
     }
     DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    int fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    auto fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
     if (0 > chmod (addr.sun_path, S_IRUSR| S_IWUSR))
 	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
     return fd;
 }
 
 /// Create local IPv4 socket at given ip and port
-int PExternServer::BindIP4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) noexcept
+auto PExternServer::BindIP4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) noexcept -> fd_t
 {
     sockaddr_in addr = {};
     addr.sin_family = PF_INET,
@@ -920,11 +918,11 @@ int PExternServer::BindIP4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) 
 }
 
 /// Create local IPv4 socket at given port on the loopback interface
-int PExternServer::BindLocalIP4 (in_port_t port, const iid_t* eifaces) noexcept
+auto PExternServer::BindLocalIP4 (in_port_t port, const iid_t* eifaces) noexcept -> fd_t
     { return BindIP4 (INADDR_LOOPBACK, port, eifaces); }
 
 /// Create local IPv6 socket at given ip and port
-int PExternServer::BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept
+auto PExternServer::BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -934,7 +932,7 @@ int PExternServer::BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) n
 }
 
 /// Create local IPv6 socket at given ip and port
-int PExternServer::BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept
+auto PExternServer::BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -948,11 +946,11 @@ int PExternServer::BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept
 
 ExternServer::ExternServer (const Msg::Link& l) noexcept
 : Msger(l)
+,_conns()
+,_eifaces()
 ,_timer (l.dest)
 ,_reply (l)
 ,_sockfd (-1)
-,_eifaces()
-,_conns()
 {
 }
 
@@ -968,8 +966,7 @@ bool ExternServer::OnError (mrid_t eid, const string& errmsg) noexcept
 void ExternServer::OnMsgerDestroyed (mrid_t mid) noexcept
 {
     DEBUG_PRINTF ("[X] Client connection %hu dropped\n", mid);
-    remove_if (_conns, [&](const PExtern& e)
-	{ return e.Dest() == mid; });
+    remove_if (_conns, [&](const auto& e) { return e.Dest() == mid; });
     if (_conns.empty() && Flag (f_CloseWhenEmpty))
 	SetFlag (f_Unused);
 }
@@ -987,6 +984,7 @@ void ExternServer::TimerR_Timer (PTimer::fd_t) noexcept
     for (int cfd; 0 <= (cfd = accept (_sockfd, nullptr, nullptr));) {
 	DEBUG_PRINTF ("[X] Client connection accepted on fd %d\n", cfd);
 	_conns.emplace_back (MsgerId()).Open (cfd, _eifaces);
+	SetFlag (f_Unused, false);
     }
     if (errno == EAGAIN) {
 	DEBUG_PRINTF ("[X] Resuming wait on fd %d\n", _sockfd);
@@ -1000,17 +998,18 @@ void ExternServer::TimerR_Timer (PTimer::fd_t) noexcept
 void ExternServer::ExternServer_Open (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty) noexcept
 {
     assert (_sockfd == -1 && "each ExternServer instance can only listen to one socket");
-    if (0 > fcntl (fd, F_SETFL, O_NONBLOCK| fcntl (fd, F_GETFL)))
+    if (auto f = fcntl (fd, F_GETFL); f < 0 || 0 > fcntl (fd, F_SETFL, O_NONBLOCK| f))
 	return ErrorLibc ("fcntl(SETFL(O_NONBLOCK))");
     _sockfd = fd;
     _eifaces = eifaces;
-    SetFlag (f_CloseWhenEmpty, closeWhenEmpty != PExternServer::WhenEmpty::Remain);
+    SetFlag (f_CloseWhenEmpty, (bool) closeWhenEmpty);
     TimerR_Timer (_sockfd);
 }
 
 void ExternServer::ExternServer_Close (void) noexcept
 {
     SetFlag (f_Unused);
+    _timer.Stop();
 }
 
 void ExternServer::ExternR_Connected (const ExternInfo* einfo) noexcept
