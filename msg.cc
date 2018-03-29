@@ -80,9 +80,9 @@ Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset
 ,_link (l)
 ,_extid (extid)
 ,_fdoffset (fdo)
-,_body (Align (size, BODY_ALIGNMENT))
+,_body (Align (size, Alignment::Body))
 {
-    // Message body is padded to BODY_ALIGNMENT
+    // Message body is padded to Alignment::Body
     auto ppade = _body.end();
     _body.memlink::resize (size);
     for (auto p = _body.end(); p < ppade; ++p)

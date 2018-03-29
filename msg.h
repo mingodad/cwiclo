@@ -136,15 +136,15 @@ public:
 	mrid_t	dest;
     };
     using fdoffset_t = uint8_t;
-    enum {
-	NO_FD_INCLUDED = numeric_limits<fdoffset_t>::max(),
-	HEADER_ALIGNMENT = 8,
-	BODY_ALIGNMENT = HEADER_ALIGNMENT,
-	FD_ALIGNMENT = alignof(int)
+    static constexpr fdoffset_t NoFdIncluded = numeric_limits<fdoffset_t>::max();
+    struct Alignment {
+	static constexpr streamsize Header = 8;
+	static constexpr streamsize Body = Header;
+	static constexpr streamsize Fd = alignof(int);
     };
 public:
-			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NO_FD_INCLUDED) noexcept;
-			Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid = 0, fdoffset_t fdo = NO_FD_INCLUDED) noexcept;
+			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
+			Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
     inline auto&	GetLink (void) const	{ return _link; }
     inline auto		Src (void) const	{ return GetLink().src; }
     inline auto		Dest (void) const	{ return GetLink().dest; }

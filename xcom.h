@@ -196,9 +196,9 @@ private:
 	    uint8_t	hsz;		// Full size of header
 	};
 	enum {
-	    MIN_MSG_HEADER_SIZE = Align (sizeof(Header)+sizeof("i\0m\0"), Msg::HEADER_ALIGNMENT),
-	    MAX_MSG_HEADER_SIZE = UINT8_MAX-sizeof(Header),
-	    MAX_MSG_BODY_SIZE = (1<<24)-1
+	    c_MinHeaderSize = Align (sizeof(Header)+sizeof("i\0m\0"), Msg::Alignment::Header),
+	    c_MaxHeaderSize = UINT8_MAX-sizeof(Header),
+	    c_MaxBodySize = (1<<24)-1
 	};
     public:
 			ExtMsg (void)		: _body(),_h{},_hbuf{} {}
@@ -209,7 +209,7 @@ private:
 	auto		Extid (void) const	{ return _h.extid; }
 	auto		FdOffset (void) const	{ return _h.fdoffset; }
 	streamsize	Size (void) const	{ return BodySize() + HeaderSize(); }
-	bool		HasFd (void) const	{ return FdOffset() != Msg::NO_FD_INCLUDED; }
+	bool		HasFd (void) const	{ return FdOffset() != Msg::NoFdIncluded; }
 	void		SetHeader (const Header& h)	{ _h = h; }
 	void		ResizeBody (streamsize sz)	{ _body.resize (sz); }
 	void		TrimBody (streamsize sz)	{ _body.memlink::resize (sz); }
@@ -227,7 +227,7 @@ private:
     private:
 	memblock	_body;
 	Header		_h;
-	char		_hbuf [MAX_MSG_HEADER_SIZE];
+	char		_hbuf [c_MaxHeaderSize];
     };
     //}}}2--------------------------------------------------------------
     //{{{2 RelayProxy

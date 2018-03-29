@@ -290,24 +290,24 @@ Extern* Extern::LookupByRelayId (mrid_t rid) noexcept // static
 
 Extern::ExtMsg::ExtMsg (Msg&& msg) noexcept
 :_body (msg.MoveBody())
-,_h { Align (_body.size(), Msg::BODY_ALIGNMENT)
+,_h { Align (_body.size(), Msg::Alignment::Body)
     , msg.Extid()
     , msg.FdOffset()
     , WriteHeaderStrings (msg.Method()) }
 {
-    assert (_body.capacity() >= _h.sz && "message body must be created aligned to Msg::BODY_ALIGNMENT");
+    assert (_body.capacity() >= _h.sz && "message body must be created aligned to Msg::Alignment::Body");
     _body.memlink::resize (_h.sz);
 }
 
 uint8_t Extern::ExtMsg::WriteHeaderStrings (methodid_t method) noexcept
 {
-    // _hbuf contains iface\0method\0signature\0, padded to Msg::HEADER_ALIGNMENT
+    // _hbuf contains iface\0method\0signature\0, padded to Msg::Alignment::Header
     auto iface = InterfaceOfMethod (method);
     assert (ptrdiff_t(sizeof(_hbuf)) >= InterfaceNameSize(iface)+MethodNextOffset(method)-2 && "the interface and method names for this message are too long to export");
     ostream os (_hbuf, sizeof(_hbuf));
     os.write (iface, InterfaceNameSize(iface));
     os.write (method, MethodNextOffset(method)-2);
-    os.align (Msg::HEADER_ALIGNMENT);
+    os.align (Msg::Alignment::Header);
     return sizeof(_h) + distance (_hbuf, os.ptr());
 }
 
@@ -626,14 +626,14 @@ void Extern::ReadIncoming (void) noexcept
 	// Now can check if fixed header is valid
 	if (_bread == sizeof(fh)) {
 	    auto& h = _inmsg.GetHeader();
-	    if (h.hsz < ExtMsg::MIN_MSG_HEADER_SIZE
-		    || !IsAligned (h.hsz, Msg::HEADER_ALIGNMENT)
-		    || h.sz > ExtMsg::MAX_MSG_BODY_SIZE
-		    || !IsAligned (h.sz, Msg::BODY_ALIGNMENT)
-		    || (h.fdoffset != Msg::NO_FD_INCLUDED
+	    if (h.hsz < ExtMsg::c_MinHeaderSize
+		    || !IsAligned (h.hsz, Msg::Alignment::Header)
+		    || h.sz > ExtMsg::c_MaxBodySize
+		    || !IsAligned (h.sz, Msg::Alignment::Body)
+		    || (h.fdoffset != Msg::NoFdIncluded
 			&& (_infd < 0	// the fd must be passed at this point
 			    || h.fdoffset+sizeof(_infd) > h.sz
-			    || !IsAligned (h.fdoffset, Msg::FD_ALIGNMENT)))
+			    || !IsAligned (h.fdoffset, Msg::Alignment::Fd)))
 		    || h.extid > extid_ServerLast) {
 		Error ("invalid message");
 		return Extern_Close();
@@ -653,7 +653,7 @@ bool Extern::AcceptIncomingMessage (void) noexcept
     }
     auto msgis = _inmsg.Read();
     auto vsz = Msg::ValidateSignature (msgis, SignatureOfMethod(method));
-    if (Align (vsz, Msg::BODY_ALIGNMENT) != _inmsg.BodySize()) {
+    if (Align (vsz, Msg::Alignment::Body) != _inmsg.BodySize()) {
 	DEBUG_PRINTF ("[XE] Incoming message body failed validation\n");
 	return false;
     }

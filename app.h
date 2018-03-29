@@ -117,7 +117,7 @@ public:
     inline int		Run (void) noexcept;
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
     Msg::Link&		CreateLinkWith (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
-    inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NO_FD_INCLUDED) noexcept;
+    inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NoFdIncluded) noexcept;
     inline void		ForwardMsg (Msg&& msg, Msg::Link& l) noexcept;
     static iid_t	InterfaceByName (const char* iname, streamsize inamesz) noexcept;
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
