@@ -278,6 +278,7 @@ void LibTestApp::TestVector (void) // static
     v.erase (v.end()-2);
     v.pop_back();
     PrintVector (v);
+    random_shuffle (v);
     sort (v);
     PrintVector (v);
     printf ("lower_bound(7): %tu\n", lower_bound (v,7)-v.begin());
@@ -286,6 +287,9 @@ void LibTestApp::TestVector (void) // static
     auto s42 = binary_search (v, 42);
     if (s42)
 	printf ("binary_search(42): %tu\n", s42-v.begin());
+    iota (v.begin(), v.end(), 2);
+    printf ("iota(2): ");
+    PrintVector (v);
 
     puts ("Constructing vector<A>(3)");
     vector<A> av (3);

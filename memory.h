@@ -543,34 +543,51 @@ void sort (I f, I l)
     qsort (f, l-f, sizeof(value_type), c_compare<value_type>);
 }
 
-template <typename Container>
-auto linear_search (Container& c, typename Container::const_reference v)
+template <typename Ctr>
+auto linear_search (Ctr& c, typename Ctr::const_reference v)
     { return linear_search (c.begin(), c.end(), v); }
-template <typename Container, typename P>
-auto linear_search_if (Container& c, P p)
+template <typename Ctr, typename P>
+auto linear_search_if (Ctr& c, P p)
     { return linear_search_if (c.begin(), c.end(), p); }
-template <typename Container>
-auto lower_bound (Container& c, typename Container::const_reference v)
+template <typename Ctr>
+auto lower_bound (Ctr& c, typename Ctr::const_reference v)
     { return lower_bound (c.begin(), c.end(), v); }
-template <typename Container>
-auto upper_bound (Container& c, typename Container::const_reference v)
+template <typename Ctr>
+auto upper_bound (Ctr& c, typename Ctr::const_reference v)
     { return upper_bound (c.begin(), c.end(), v); }
-template <typename Container>
-auto binary_search (Container& c, typename Container::const_reference v)
+template <typename Ctr>
+auto binary_search (Ctr& c, typename Ctr::const_reference v)
     { return binary_search (c.begin(), c.end(), v); }
-template <typename Container>
-void sort (Container& c)
+template <typename Ctr>
+void sort (Ctr& c)
     { sort (c.begin(), c.end()); }
 
 //}}}-------------------------------------------------------------------
 //{{{ Other algorithms
 
-template <typename Container, typename Discriminator>
-void remove_if (Container& ctr, Discriminator f)
+template <typename Ctr, typename Discriminator>
+void remove_if (Ctr& ctr, Discriminator f)
 {
     for (auto i = ctr.cbegin(); i < ctr.cend(); ++i)
 	if (f(*i))
 	    --(i = ctr.erase(i));
+}
+
+template <typename I>
+void random_shuffle (I f, I l)
+{
+    for (; f < l; ++f)
+	iter_swap (f, f + (rand() % size_t(l-f)));
+}
+template <typename Ctr>
+inline void random_shuffle (Ctr& ctr)
+    { random_shuffle (ctr.begin(), ctr.end()); }
+
+template <typename I>
+inline void iota (I f, I l, typename iterator_traits<I>::value_type v)
+{
+    for (; f < l; ++f,++v)
+	*f = v;
 }
 
 } // namespace cwiclo
