@@ -5,6 +5,5 @@ includedir=@includedir@
 Name: @PKG_NAME@
 Description: Asynchronous component object library
 Version: @PKG_MAJOR@.@PKG_MINOR@
-Libs: -L${libdir} -l@PKG_NAME@
-Libs.private: -Wl,-gc-sections
+Libs: -L${libdir} -Wl,-gc-sections -l@PKG_NAME@
 Cflags: -I${includedir}

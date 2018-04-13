@@ -21,6 +21,7 @@ RMPATH		:= rmdir -p --ignore-fail-on-non-empty
 
 ################ Destination #########################################
 
+prefix		:= @prefix@
 BINDIR		:= @bindir@
 INCDIR		:= @includedir@
 LIBDIR		:= @libdir@
