@@ -306,9 +306,9 @@ public:
     inline constexpr	atomic_flag (bool v)	: _v(v) {}
 			atomic_flag (const atomic_flag&) = delete;
     atomic_flag&	operator= (const atomic_flag&) = delete;
-    void		clear (memory_order order = memory_order_seq_cst)
+    void		clear (memory_order order = memory_order_release)
 			    { __atomic_clear (&_v, order); }
-    bool		test_and_set (memory_order order = memory_order_seq_cst)
+    bool		test_and_set (memory_order order = memory_order_acq_rel)
 			    { return __atomic_test_and_set (&_v, order); }
 };
 #define ATOMIC_FLAG_INIT	{false}
