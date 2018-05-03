@@ -250,6 +250,7 @@ App::App (void) noexcept
 ,_outq()
 ,_inq()
 ,_msgers()
+,_timers()
 ,_errors()
 {
     assert (!s_App && "there must be only one App object");

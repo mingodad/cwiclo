@@ -160,7 +160,10 @@ public:
     inline ostream	Write (void)		{ return ostream (_body); }
     static streamsize	ValidateSignature (istream& is, const char* sig) noexcept;
     streamsize		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
+			Msg (Msg&& msg) : Msg(msg.GetLink(),msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
 			Msg (Msg&& msg, const Link& l) : Msg(l,msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
+			Msg (const Msg&) = delete;
+    Msg&		operator= (const Msg&) = delete;
 private:
     methodid_t		_method;
     Link		_link;
