@@ -20,8 +20,8 @@ public:
     inline auto&	back (void) const				{ return at(size()-1); }
     inline auto&	back (void)					{ return at(size()-1); }
     inline void		push_back (const_reference c)			{ resize(size()+1); back() = c; }
-			using memblock::insert;
-    auto		insert (const_iterator ip, const_reference c, size_type n =1)	{ return fill_n (memblock::insert (ip, n), n, c); }
+    auto		insert (const_iterator ip, const_reference c, size_type n = 1)	{ return fill_n (memblock::insert (ip, n), n, c); }
+    inline auto		insert (const_iterator ip, const_pointer s, size_type n)	{ return memblock::insert (ip, s, n); }
     inline auto		insert (const_iterator ip, const string& s)			{ return insert (ip, s.c_str(), s.size()); }
     inline auto		insert (const_iterator ip, const_pointer s)			{ return insert (ip, s, strlen(s)); }
     inline auto		insert (const_iterator ip, const_pointer f, const_iterator l)	{ return insert (ip, f, l-f); }
@@ -71,7 +71,6 @@ public:
     inline void		pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
     inline void		clear (void)					{ memlink::resize (0); auto e = end(); if (e) { assert (capacity() && "modifying a const linked string"); *e = 0; }}
 
-			using memblock::replace;
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ return memblock::replace (f, l-f, s, slen); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s)			{ return replace (f, l, s, strlen(s)); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ return replace (f, l, i1, i2-i1); }
