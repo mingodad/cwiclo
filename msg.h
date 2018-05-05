@@ -263,7 +263,7 @@ public:
 			    { if (mid == CreatorId()) SetFlag (f_Unused); }
 protected:
     explicit		Msger (const Msg::Link& l)	:_link(l),_flags() {}
-    explicit		Msger (mrid_t id)		:_link{id,id},_flags(1u<<f_Static) {}
+    explicit		Msger (mrid_t id)		:_link{id,id},_flags(BitMask(f_Static)) {}
 			Msger (const Msger&) = delete;
     void		operator= (const Msger&) = delete;
     void		SetFlag (unsigned f, bool v = true)	{ SetBit(_flags,f,v); }

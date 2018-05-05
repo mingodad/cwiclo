@@ -223,11 +223,14 @@ inline constexpr make_unsigned_t<T> Square (T n)
 //{{{ Bit manipulation
 
 template <typename T>
-constexpr inline bool GetBit (T v, unsigned i)
-    { return v&T(T(1)<<i); }
+inline constexpr bool GetBit (T v, unsigned i)
+    { return (v>>i)&1; }
+template <typename T = unsigned>
+inline constexpr T BitMask (unsigned i)
+    { return T(1)<<i; }
 template <typename T>
-inline void SetBit (T& v, unsigned i, bool b=true)
-    { T m(T(T(1)<<i)); v=b?T(v|m):T(v&~m); }
+inline constexpr void SetBit (T& v, unsigned i, bool b=true)
+    { auto m = BitMask<T>(i); v=b?(v|m):(v&~m); }
 template <typename T>
 inline constexpr auto Rol (T v, remove_reference_t<T> n)
     { return (v << n) | (v >> (bits_in_type<T>::value-n)); }

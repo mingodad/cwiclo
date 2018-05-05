@@ -50,20 +50,21 @@ iid_t App::InterfaceByName (const char* iname, streamsize inamesz) noexcept // s
 //}}}-------------------------------------------------------------------
 //{{{ Signal and error handling
 
-#define S(s) (1<<(s))
+#define M(s) BitMask(s)
 enum {
-    sigset_Die	= S(SIGILL)|S(SIGABRT)|S(SIGBUS)|S(SIGFPE)|S(SIGSYS)|S(SIGSEGV)|S(SIGALRM)|S(SIGXCPU),
-    sigset_Quit	= S(SIGINT)|S(SIGQUIT)|S(SIGTERM)|S(SIGPWR),
-    sigset_Msg	= sigset_Quit|S(SIGHUP)|S(SIGCHLD)|S(SIGWINCH)|S(SIGURG)|S(SIGXFSZ)|S(SIGUSR1)|S(SIGUSR2)|S(SIGPIPE)
+    sigset_Die	= M(SIGILL)|M(SIGABRT)|M(SIGBUS)|M(SIGFPE)|M(SIGSYS)|M(SIGSEGV)|M(SIGALRM)|M(SIGXCPU),
+    sigset_Quit	= M(SIGINT)|M(SIGQUIT)|M(SIGTERM)|M(SIGPWR),
+    sigset_Msg	= sigset_Quit|M(SIGHUP)|M(SIGCHLD)|M(SIGWINCH)|M(SIGURG)|M(SIGXFSZ)|M(SIGUSR1)|M(SIGUSR2)|M(SIGPIPE)
 };
+#undef M
 enum { qc_ShellSignalQuitOffset = 128 };
 
 void App::InstallSignalHandlers (void) noexcept // static
 {
     for (auto sig = 0u; sig < NSIG; ++sig) {
-	if (sigset_Msg & S(sig))
+	if (GetBit (sigset_Msg, sig))
 	    signal (sig, MsgSignalHandler);
-	else if (sigset_Die & S(sig))
+	else if (GetBit (sigset_Die, sig))
 	    signal (sig, FatalSignalHandler);
     }
 }
@@ -84,8 +85,8 @@ void App::FatalSignalHandler (int sig) noexcept // static
 
 void App::MsgSignalHandler (int sig) noexcept // static
 {
-    s_ReceivedSignals |= S(sig);
-    if (sigset_Quit & S(sig)) {
+    SetBit (s_ReceivedSignals, sig);
+    if (GetBit (sigset_Quit, sig)) {
 	App::Instance().Quit();
 	alarm (1);
     }
@@ -273,7 +274,7 @@ void App::ForwardReceivedSignals (void) noexcept
 	return;
     PSignal psig (mrid_App);
     for (auto i = 0u; i < sizeof(s_ReceivedSignals)*8; ++i)
-	if (oldrs & S(i))
+	if (GetBit (oldrs, i))
 	    psig.Signal (i);
     // clear only the signal bits processed, in case new signals arrived during the loop
     s_ReceivedSignals ^= oldrs;
