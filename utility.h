@@ -122,7 +122,7 @@ static inline NONNULL() auto strnext_r (const char* s, unsigned& n)
 {
 #if __x86__
     if (!compile_constant(strlen(s)))
-	asm ("repnz\tscasb":"+D"(s),"+c"(n):"a"(0):"memory");
+	__asm__("repnz\tscasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
     else
 #endif
     { auto l = strnlen(s, n); l += !!l; s += l; n -= l; }
@@ -243,7 +243,7 @@ inline auto FirstBit (T v, remove_reference_t<T> nbv)
 {
     auto n = nbv;
 #if __x86__
-    if (!compile_constant(v)) asm ("bsr\t%1, %0":"+r"(n):"rm"(v)); else
+    if (!compile_constant(v)) __asm__("bsr\t%1, %0":"+r"(n):"rm"(v)); else
 #endif
     if (v) n = (bits_in_type<T>::value-1) - __builtin_clz(v);
     return n;
@@ -254,7 +254,7 @@ inline T NextPow2 (T v)
 {
     T r = v-1;
 #if __x86__
-    if (!compile_constant(r)) asm("bsr\t%0, %0":"+r"(r)); else
+    if (!compile_constant(r)) __asm__("bsr\t%0, %0":"+r"(r)); else
 #endif
     { r = FirstBit(r,r); if (r >= bits_in_type<T>::value-1) r = T(-1); }
     return 1<<(1+r);
@@ -283,7 +283,7 @@ static inline void tight_loop_pause (void)
 {
     #if __x86__
 	#if __clang__
-	    __asm__ volatile ("rep nop");
+	    __asm__("rep nop");
 	#else
 	    __builtin_ia32_pause();
 	#endif
@@ -357,43 +357,9 @@ union alignas(16) simd16_t {
     float	asf [4];
     double	asd [2];
 
-    static inline CONST auto zero_sf (void) noexcept;
+    static inline CONST constexpr auto zero (void) noexcept
+	{ return simd16_t {0,0,0,0}; }
 };
-
-#if __clang__
-namespace {
-
-#if __AVX__
-static inline auto __builtin_ia32_loadups (const float* f)
-    { simd16_t::sf_t v; asm ("vmovups\t%1, %0":"=x"(v):"m"(*(const simd16_t::sf_t*) f)); return (v); }
-static inline void __builtin_ia32_storeups (float* f, simd16_t::sf_t v)
-    { asm ("vmovups\t%1, %0":"=m"(*(simd16_t::sf_t*) f):"x"(v)); }
-static inline auto __builtin_ia32_xorps (simd16_t::sf_t v1, simd16_t::sf_t v2)
-    { asm ("vxorps\t%1, %0, %0":"+x"(v1):"x"(v2)); return (v1); }
-static inline auto __builtin_ia32_paddq128 (simd16_t::sf_t v1, simd16_t::sf_t v2)
-    { asm ("vpaddq\t%1, %0, %0":"+x"(v1):"x"(v2)); return (v1); }
-#elif __SSE2__
-static inline auto __builtin_ia32_loadups (const float* f)
-    { simd16_t::sf_t v; asm ("movups\t%1, %0":"=x"(v):"m"(*(const simd16_t::sf_t*) f)); return (v); }
-static inline void __builtin_ia32_storeups (float* f, simd16_t::sf_t v)
-    { asm ("movups\t%1, %0":"=m"(*(simd16_t::sf_t*) f):"x"(v)); }
-static inline auto __builtin_ia32_xorps (simd16_t::sf_t v1, simd16_t::sf_t v2)
-    { asm ("xorps\t%1, %0":"+x"(v1):"x"(v2)); return (v1); }
-static inline auto __builtin_ia32_paddq128 (simd16_t::sf_t v1, simd16_t::sf_t v2)
-    { asm ("paddq\t%1, %0":"+x"(v1):"x"(v2)); return (v1); }
-#endif
-static inline auto __builtin_ia32_movss (simd16_t::sf_t v1, simd16_t::sf_t v2)
-    { v1[0] = v2[0]; return (v1); }
-
-} // namespace
-#endif // clang
-
-/// Returns a zero-filled xmm register for use with the "x" constraint.
-auto simd16_t::zero_sf (void) noexcept // static
-{
-    simd16_t z; asm("":"=x"(z.sf));	// asm forces use of undefined value in z.sf register
-    return __builtin_ia32_xorps(z.sf,z.sf);
-}
 
 //}}}-------------------------------------------------------------------
 //{{{ File utility functions

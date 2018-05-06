@@ -116,7 +116,7 @@ inline void swap (T (&a)[N], T (&b)[N])
 }
 
 template <typename T, typename U = T>
-inline auto exchange (T& o, U&& nv)
+inline constexpr auto exchange (T& o, U&& nv)
 {
     auto ov = move(o);
     o = forward<T>(nv);
@@ -359,56 +359,6 @@ extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
 template <typename T>
 T* rotate (T* f, T* m, T* l)
     { brotate (f, m, l); return f; }
-
-template <typename T>
-inline void itzero16 (T* t)
-{
-    static_assert (sizeof(T) == 16, "itzero16 must only be used on 16-byte types");
-    static_assert (alignof(T) >= 16, "itzero16 must only be used on 16-aligned types");
-#if __SSE2__
-    reinterpret_cast<simd16_t*>(t)->sf = simd16_t::zero_sf();
-#else
-    memset (t, 0, sizeof(T));
-#endif
-}
-
-template <typename T>
-inline void itcopy16 (const T* f, T* t)
-{
-    static_assert (sizeof(T) == 16, "itcopy16 must only be used on 16-byte types");
-    static_assert (alignof(T) >= 16, "itcopy16 must only be used on 16-aligned types");
-#if __SSE2__
-    reinterpret_cast<simd16_t*>(t)->sf = reinterpret_cast<const simd16_t*>(f)->sf;
-#else
-    *t = *f;
-#endif
-}
-
-template <typename T>
-inline void itswap16 (T* f, T* t)
-{
-    static_assert (sizeof(T) == 16, "itswap16 must only be used on 16-byte types");
-    static_assert (alignof(T) >= 16, "itswap16 must only be used on 16-aligned types");
-#if __SSE2__
-    swap (reinterpret_cast<simd16_t*>(f)->sf, reinterpret_cast<simd16_t*>(t)->sf);
-#else
-    iter_swap (f, t);
-#endif
-}
-
-template <typename T>
-inline void itmoveinit16 (T* f, T* t)
-{
-    static_assert (sizeof(T) == 16, "itmoveinit16 must only be used on 16-byte types");
-    static_assert (alignof(T) >= 16, "itmoveinit16 must only be used on 16-aligned types");
-#if __SSE2__
-    reinterpret_cast<simd16_t*>(t)->sf = reinterpret_cast<const simd16_t*>(f)->sf;
-    reinterpret_cast<simd16_t*>(f)->sf = simd16_t::zero_sf();
-#else
-    itzero16 (t);
-    itswap16 (f, t);
-#endif
-}
 
 //}}}-------------------------------------------------------------------
 //{{{ uninitialized fill and copy

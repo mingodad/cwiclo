@@ -23,7 +23,7 @@ public:
     using difference_type	= memblock::difference_type;
     using initlist_t		= std::initializer_list<value_type>;
 public:
-    inline			vector (void)			: _data() { }
+    constexpr			vector (void)			: _data() { }
     inline explicit		vector (size_type n)		: _data() { uninitialized_default_construct_n (insert_hole(begin(),n), n); }
     inline			vector (size_type n, const T& v): _data() { uninitialized_fill_n (insert_hole(begin(),n), n, v); }
     inline			vector (const vector& v)	: _data() { uninitialized_copy_n (v.begin(), v.size(), iterator(_data.insert(_data.begin(),v.bsize()))); }
@@ -31,41 +31,41 @@ public:
     template <size_type N>
     inline constexpr		vector (const T (&a)[N])	: _data (a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
     inline			vector (initlist_t v) noexcept;
-    inline			vector (vector&& v)		: _data (move(v._data)) {}
+    constexpr			vector (vector&& v)		: _data (move(v._data)) {}
     inline			~vector (void) noexcept		{ destroy (begin(), end()); }
     inline auto&		operator= (const vector& v)	{ assign (v); return *this; }
     inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (initlist_t v)	{ assign (v); return *this; }
     bool			operator== (const vector& v) const noexcept;
-    inline			operator const memlink& (void) const	{ return _data; }
+    constexpr			operator const memlink& (void) const	{ return _data; }
     inline void			reserve (size_type n)		{ _data.reserve (n * sizeof(T)); }
     void			resize (size_type n) noexcept;
     void			resize (size_type n, const_reference v) noexcept;
-    inline size_type		capacity (void) const		{ return _data.capacity() / sizeof(T);	}
-    inline size_type		size (void) const		{ return _data.size() / sizeof(T);	}
-    inline size_type		bsize (void) const		{ return _data.size();			}
-    inline size_type		max_size (void) const		{ return _data.max_size() / sizeof(T);	}
-    inline bool			empty (void) const		{ return _data.empty();			}
-    inline auto			data (void)			{ return pointer (_data.data());	}
-    inline auto			data (void) const		{ return const_pointer (_data.data());	}
-    inline auto			begin (void)			{ return iterator (_data.begin());	}
-    inline auto			begin (void) const		{ return const_iterator (_data.begin());}
-    inline auto			cbegin (void) const		{ return begin();			}
-    inline auto			end (void)			{ return iterator (_data.end());	}
-    inline auto			end (void) const		{ return const_iterator (_data.end());	}
-    inline auto			cend (void) const		{ return end();				}
-    inline auto			iat (size_type i)		{ assert (i <= size()); return begin() + i; }
-    inline auto			iat (size_type i) const		{ assert (i <= size()); return begin() + i; }
-    inline auto			ciat (size_type i) const	{ assert (i <= size()); return cbegin() + i; }
+    constexpr size_type		capacity (void) const		{ return _data.capacity() / sizeof(T);	}
+    constexpr size_type		size (void) const		{ return _data.size() / sizeof(T);	}
+    constexpr size_type		bsize (void) const		{ return _data.size();			}
+    constexpr size_type		max_size (void) const		{ return _data.max_size() / sizeof(T);	}
+    constexpr bool		empty (void) const		{ return _data.empty();			}
+    constexpr auto		data (void)			{ return pointer (_data.data());	}
+    constexpr auto		data (void) const		{ return const_pointer (_data.data());	}
+    constexpr auto		begin (void)			{ return iterator (_data.begin());	}
+    constexpr auto		begin (void) const		{ return const_iterator (_data.begin());}
+    constexpr auto		cbegin (void) const		{ return begin();			}
+    constexpr auto		end (void)			{ return iterator (_data.end());	}
+    constexpr auto		end (void) const		{ return const_iterator (_data.end());	}
+    constexpr auto		cend (void) const		{ return end();				}
+    constexpr auto		iat (size_type i)		{ assert (i <= size()); return begin() + i; }
+    constexpr auto		iat (size_type i) const		{ assert (i <= size()); return begin() + i; }
+    constexpr auto		ciat (size_type i) const	{ assert (i <= size()); return cbegin() + i; }
     inline auto&		at (size_type i)		{ assert (i < size()); return begin()[i]; }
-    inline auto&		at (size_type i) const		{ assert (i < size()); return begin()[i]; }
-    inline auto&		cat (size_type i) const		{ assert (i < size()); return cbegin()[i]; }
+    constexpr auto&		at (size_type i) const		{ assert (i < size()); return begin()[i]; }
+    constexpr auto&		cat (size_type i) const		{ assert (i < size()); return cbegin()[i]; }
     inline auto&		operator[] (size_type i)	{ return at (i); }
-    inline auto&		operator[] (size_type i) const	{ return at (i); }
+    constexpr auto&		operator[] (size_type i) const	{ return at (i); }
     inline auto&		front (void)			{ assert (!empty()); return at(0); }
-    inline auto&		front (void) const		{ assert (!empty()); return at(0); }
+    constexpr auto&		front (void) const		{ assert (!empty()); return at(0); }
     inline auto&		back (void)			{ assert (!empty()); return end()[-1]; }
-    inline auto&		back (void) const		{ assert (!empty()); return end()[-1]; }
+    constexpr auto&		back (void) const		{ assert (!empty()); return end()[-1]; }
     inline void			clear (void)			{ destroy (begin(), end()); _data.clear(); }
     inline void			swap (vector&& v)		{ _data.swap (move(v._data)); }
     inline void			deallocate (void) noexcept	{ destroy (begin(), end()); _data.deallocate(); }
@@ -99,7 +99,7 @@ public:
     inline auto			append (initlist_t v)			{ return append (v.begin(), v.end()); }
     inline void			pop_back (void)				{ destroy_at (end()-1); _data.memlink::resize (_data.size() - sizeof(T)); }
     inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
-    inline bool			is_linked (void) const			{ return !_data.capacity(); }
+    constexpr bool		is_linked (void) const			{ return !_data.capacity(); }
     inline void			unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void) noexcept;
     inline void			link (const_pointer p, size_type n)	{ _data.link (memblock::const_pointer(p), n * sizeof(T)); }

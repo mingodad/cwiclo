@@ -12,7 +12,7 @@ class istream;
 class ostream;
 class sstream;
 
-class alignas(16) cmemlink {
+class cmemlink {
 public:
     using value_type		= char;
     using pointer		= value_type*;
@@ -28,14 +28,14 @@ public:
     inline constexpr		cmemlink (const_pointer p, size_type n, bool z)	: _data(const_cast<pointer>(p)), _size(n), _capz(z) {}
     inline			cmemlink (const void* p, size_type n)	: cmemlink (reinterpret_cast<const_pointer>(p), n) {}
 #if __SSE2__
-    inline			cmemlink (void)				{ itzero16 (this); }
-    inline			cmemlink (const cmemlink& v)		{ itcopy16 (&v, this); }
-    inline			cmemlink (cmemlink&& v)			{ itmoveinit16 (&v, this); }
-    void			swap (cmemlink&& v)			{ itswap16 (&v, this); }
+    inline constexpr		cmemlink (void)				: _sblk (simd16_t::zero()) {}
+    inline constexpr		cmemlink (const cmemlink& v)		: _sblk (v._sblk) {}
+    inline constexpr		cmemlink (cmemlink&& v)			: _sblk (exchange (v._sblk, simd16_t::zero())) {}
+    void			swap (cmemlink&& v)			{ ::cwiclo::swap (_sblk, v._sblk); }
 #else
     inline constexpr		cmemlink (void)				: _data (nullptr), _size(), _capz() {}
     inline constexpr		cmemlink (const cmemlink& v)		: cmemlink (v._data, v._size, v._zerot) {}
-    inline 			cmemlink (cmemlink&& v)			: _data (exchange (v._data, nullptr)), _size (exchange (v._size, 0u)), _capz (exchange (v._capz, 0u)) {}
+    inline constexpr		cmemlink (cmemlink&& v)			: _data (exchange (v._data, nullptr)), _size (exchange (v._size, 0u)), _capz (exchange (v._capz, 0u)) {}
     void			swap (cmemlink&& v)			{ ::cwiclo::swap (_data, v._data); ::cwiclo::swap (_size, v._size); ::cwiclo::swap (_capz, v._capz); }
 #endif
     inline auto&		operator= (const cmemlink& v)		{ link (v); return *this; }
@@ -75,15 +75,24 @@ protected:
     inline void			set_zero_terminated (bool b = true)	{ _zerot = b; }
     inline void			set_capacity (size_type c)		{ _capacity = c; }
 private:
-    pointer			_data;			///< Pointer to the data block
-    size_type			_size alignas(8);	///< Size of the data block. Aligning _size makes ccmemlink 16 bytes on 32 and 64 bit platforms.
+#if __SSE2__
     union {
-	size_type		_capz;
 	struct {
-	    bool		_zerot:1;
-	    size_type		_capacity:31;
+#endif
+	    pointer		_data;			///< Pointer to the data block
+	    size_type		_size alignas(8);	///< Size of the data block. Aligning _size makes ccmemlink 16 bytes on 32 and 64 bit platforms.
+	    union {
+		size_type	_capz;
+		struct {
+		    bool	_zerot:1;		///< Block is zero-terminated
+		    size_type	_capacity:31;		///< Total allocated capacity. Zero when linked.
+		};
+	    };
+#if __SSE2__
 	};
+	simd16_t		_sblk;			// For efficient initialization and swapping
     };
+#endif
 };
 
 //----------------------------------------------------------------------
@@ -91,9 +100,9 @@ private:
 class memlink : public cmemlink {
 public:
 				using cmemlink::cmemlink;
-    inline			memlink (const cmemlink& v)		: cmemlink(v) {}
-    inline			memlink (const memlink& v)		: cmemlink(v) {}
-    inline			memlink (memlink&& v)			: cmemlink(move(v)) {}
+    inline constexpr		memlink (const cmemlink& v)		: cmemlink(v) {}
+    inline constexpr		memlink (const memlink& v)		: cmemlink(v) {}
+    inline constexpr		memlink (memlink&& v)			: cmemlink(move(v)) {}
 				using cmemlink::data;
     constexpr pointer		data (void)				{ return dataw(); }
 				using cmemlink::begin;
@@ -117,15 +126,15 @@ public:
 
 class memblock : public memlink {
 public:
-    inline			memblock (void)				: memlink() {}
+    inline constexpr		memblock (void)				: memlink() {}
     inline constexpr		memblock (const_pointer p, size_type n)	: memlink(p,n) {}
     inline constexpr		memblock (const_pointer p, size_type n, bool z)	: memlink(p,n,z) {}
     inline			memblock (void* p, size_type n)		: memlink(p,n) {}
     inline			memblock (const void* p, size_type n)	: memlink(p,n) {}
     inline			memblock (size_type sz) noexcept	: memblock() { resize (sz); }
-    inline			memblock (const cmemlink& v)		: memlink(v) {}
+    inline constexpr		memblock (const cmemlink& v)		: memlink(v) {}
     inline			memblock (const memblock& v)		: memblock() { assign(v); }
-    inline			memblock (memblock&& v)			: memlink(move(v)) {}
+    inline constexpr		memblock (memblock&& v)			: memlink(move(v)) {}
     inline			~memblock (void) noexcept		{ deallocate(); }
     inline void			manage (pointer p, size_type n)		{ assert(!capacity() && "unlink or deallocate first"); link (p, n); set_capacity(n); }
     void			assign (const_pointer p, size_type n) noexcept;

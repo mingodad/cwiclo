@@ -46,7 +46,6 @@
 #define likely(x)               __builtin_expect(!!(x), 1)
 #define unlikely(x)             __builtin_expect(!!(x), 0)
 #define compile_constant(x)     __builtin_constant_p(x)
-#define asm			__asm__
 #if __clang__
     #define MALLOCLIKE_ARG(...)
 #else

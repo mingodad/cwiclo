@@ -129,7 +129,7 @@ public:					\
 //}}}-------------------------------------------------------------------
 //{{{ Msg
 
-class alignas(16) Msg {
+class Msg {
 public:
     struct Link {
 	mrid_t	src;

@@ -14,10 +14,10 @@ public:
     inline		string (const_pointer s, size_type len)		: memblock (s,len,true) { copy_link(); }
     inline		string (const_pointer s1, const_pointer s2)	: string (s1,s2-s1) {}
     inline		string (const_pointer s)			: memblock (s, strlen(s), true) {}
-    inline		string (string&& s)				: memblock (move(s)) {}
+    inline constexpr	string (string&& s)				: memblock (move(s)) {}
     inline		string (const string& s)			: string (s.data(), s.size()) {}
-    inline auto		c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
-    inline auto&	back (void) const				{ return at(size()-1); }
+    constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
+    constexpr auto&	back (void) const				{ return at(size()-1); }
     inline auto&	back (void)					{ return at(size()-1); }
     inline void		push_back (const_reference c)			{ resize(size()+1); back() = c; }
     auto		insert (const_iterator ip, const_reference c, size_type n = 1)	{ return fill_n (memblock::insert (ip, n), n, c); }
@@ -124,9 +124,9 @@ public:
     constexpr		lstring (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
     constexpr		lstring (const_pointer s1, const_pointer s2)	: lstring (s1, s2-s1) {}
     inline		lstring (const_pointer s)			: lstring (s, strlen(s)) {}
-    inline		lstring (lstring&& s)				: cmemlink (move(s)) {}
-    inline		lstring (const lstring& s)			: cmemlink (s) {}
-    inline		lstring (const string& s)			: cmemlink (s) {}
+    constexpr		lstring (lstring&& s)				: cmemlink (move(s)) {}
+    constexpr		lstring (const lstring& s)			: cmemlink (s) {}
+    constexpr		lstring (const string& s)			: cmemlink (s) {}
     inline void		swap (lstring&& s)				{ cmemlink::swap (move(s)); }
     inline auto&	operator= (const string& s)			{ cmemlink::operator= (s); return *this; }
     inline auto&	operator= (lstring&& s)				{ cmemlink::operator= (move(s)); return *this; }
