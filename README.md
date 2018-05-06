@@ -12,9 +12,11 @@ libstdc++.so are available, and so must not be linked with anything other
 than libc. They should, in fact, be linked statically, once you find a
 libc that does not require a megabyte to implement printf and strcpy.
 
-Compilation requires C++17 support, so use gcc 7.
+Compilation requires C++17 support; use gcc 7 or clang 6.
 
-> ./configure && make check && make install
+```sh
+./configure && make check && make install
+```
 
 Read the files in the [test/ directory](test) for usage examples.
 Once the project is more complete, additional documentation will be written.

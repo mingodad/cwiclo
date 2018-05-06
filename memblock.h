@@ -24,16 +24,15 @@ public:
     using const_iterator	= const_pointer;
     using iterator		= pointer;
 public:
-    inline constexpr		cmemlink (const_pointer p, size_type n)	: _data(const_cast<pointer>(p)), _size(n), _capz() {}
-    inline constexpr		cmemlink (const_pointer p, size_type n, bool z)	: _data(const_cast<pointer>(p)), _size(n), _capz(z) {}
+    inline constexpr		cmemlink (const_pointer p, size_type n, bool z = false)	: _data(const_cast<pointer>(p)), _size(n), _capz(z) {}
     inline			cmemlink (const void* p, size_type n)	: cmemlink (reinterpret_cast<const_pointer>(p), n) {}
-#if __SSE2__
+#if __SSE2__ && NDEBUG		// SSE optimizations result in simd16_t member, which is very large viewed in the debugger, so turn it off in unoptimized builds
     inline constexpr		cmemlink (void)				: _sblk (simd16_t::zero()) {}
     inline constexpr		cmemlink (const cmemlink& v)		: _sblk (v._sblk) {}
     inline constexpr		cmemlink (cmemlink&& v)			: _sblk (exchange (v._sblk, simd16_t::zero())) {}
     void			swap (cmemlink&& v)			{ ::cwiclo::swap (_sblk, v._sblk); }
 #else
-    inline constexpr		cmemlink (void)				: _data (nullptr), _size(), _capz() {}
+    inline constexpr		cmemlink (void)				: cmemlink (nullptr, 0, false) {}
     inline constexpr		cmemlink (const cmemlink& v)		: cmemlink (v._data, v._size, v._zerot) {}
     inline constexpr		cmemlink (cmemlink&& v)			: _data (exchange (v._data, nullptr)), _size (exchange (v._size, 0u)), _capz (exchange (v._capz, 0u)) {}
     void			swap (cmemlink&& v)			{ ::cwiclo::swap (_data, v._data); ::cwiclo::swap (_size, v._size); ::cwiclo::swap (_capz, v._capz); }
@@ -75,7 +74,7 @@ protected:
     inline void			set_zero_terminated (bool b = true)	{ _zerot = b; }
     inline void			set_capacity (size_type c)		{ _capacity = c; }
 private:
-#if __SSE2__
+#if __SSE2__ && NDEBUG
     union {
 	struct {
 #endif
@@ -88,7 +87,7 @@ private:
 		    size_type	_capacity:31;		///< Total allocated capacity. Zero when linked.
 		};
 	    };
-#if __SSE2__
+#if __SSE2__ && NDEBUG
 	};
 	simd16_t		_sblk;			// For efficient initialization and swapping
     };
