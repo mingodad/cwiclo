@@ -40,7 +40,7 @@ public:
     int			assignv (const char* fmt, va_list args) noexcept;
     int			assignf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
     template <typename... Args>
-    static inline auto	createf (const char* fmt, Args&&... args)	{ string r; r.assignf (fmt, forward<Args>(args)...); return r; }
+    inline static auto	createf (const char* fmt, Args&&... args)	{ string r; r.assignf (fmt, forward<Args>(args)...); return r; }
     static int		compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2) noexcept;
     inline auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
     inline auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }

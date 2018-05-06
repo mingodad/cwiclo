@@ -12,7 +12,7 @@ class istream;
 class ostream;
 class sstream;
 
-class cmemlink {
+class alignas(16) cmemlink {
 public:
     using value_type		= char;
     using pointer		= value_type*;

@@ -78,13 +78,13 @@ class numeric_limits {
 public:
     static constexpr const bool is_signed = ::cwiclo::is_signed<T>::value;	///< True if the type is signed.
     static constexpr const bool is_integral = is_trivial<T>::value;	///< True if fixed size and cast-copyable.
-    static inline constexpr auto min (void) {
+    inline static constexpr auto min (void) {
 	if constexpr (is_signed)
 	    return base_type(1)<<(bits_in_type<base_type>::value-1);
 	else
 	    return base_type(0);
     }
-    static inline constexpr auto max (void) {
+    inline static constexpr auto max (void) {
 	if constexpr (is_signed)
 	    return base_type(make_unsigned_t<base_type>(min())-1);
 	else
@@ -96,14 +96,11 @@ public:
 //{{{ Array macros
 
 /// Returns the number of elements in a static vector
-template <typename T, size_t N> constexpr inline auto ArraySize (T(&a)[N])
-{
-    static_assert (sizeof(a), "C++ forbids zero-size arrays");
-    return N;
-}
+template <typename T, size_t N>
+inline constexpr auto ArraySize (T(&a)[N] [[maybe_unused]]) { return N; }
 /// Returns the end() for a static vector
-template <typename T, size_t N> constexpr inline auto ArrayEnd (T(&a)[N])
-{ return &a[ArraySize(a)]; }
+template <typename T, size_t N>
+inline constexpr auto ArrayEnd (T(&a)[N]) { return &a[ArraySize(a)]; }
 /// Expands into a ptr,ArraySize expression for the given static vector; useful as link arguments.
 #define ArrayBlock(v)	&(v)[0], ArraySize(v)
 /// Expands into a begin,end expression for the given static vector; useful for algorithm arguments.
@@ -118,7 +115,7 @@ template <typename T, size_t N> constexpr inline auto ArrayEnd (T(&a)[N])
 #define eachfor(i,ctr)	for (auto i = (ctr).end(); i-- > (ctr).begin();)
 
 /// Returns s+strlen(s)+1
-static inline NONNULL() auto strnext_r (const char* s, unsigned& n)
+inline static NONNULL() auto strnext_r (const char* s, unsigned& n)
 {
 #if __x86__
     if (!compile_constant(strlen(s)))
@@ -128,11 +125,11 @@ static inline NONNULL() auto strnext_r (const char* s, unsigned& n)
     { auto l = strnlen(s, n); l += !!l; s += l; n -= l; }
     return s;
 }
-static inline NONNULL() auto strnext_r (char* s, unsigned& n)
+inline static NONNULL() auto strnext_r (char* s, unsigned& n)
     { return const_cast<char*>(strnext_r (const_cast<const char*>(s), n)); }
-static inline NONNULL() auto strnext (const char* s)
+inline static NONNULL() auto strnext (const char* s)
     { unsigned n = UINT_MAX; return strnext_r(s,n); }
-static inline NONNULL() auto strnext (char* s)
+inline static NONNULL() auto strnext (char* s)
     { unsigned n = UINT_MAX; return strnext_r(s,n); }
 
 template <typename T> inline constexpr auto advance (T* p, ptrdiff_t n) { return p + n; }
@@ -279,7 +276,7 @@ enum memory_order {
 namespace {
 
 // Use in lock wait loops to relax the CPU load
-static inline void tight_loop_pause (void)
+inline static void tight_loop_pause (void)
 {
     #if __x86__
 	#if __clang__
@@ -293,11 +290,11 @@ static inline void tight_loop_pause (void)
 }
 
 template <typename T>
-static inline T kill_dependency (T v) noexcept
+inline static T kill_dependency (T v) noexcept
     { return T(v); }
-static inline void atomic_thread_fence (memory_order order) noexcept
+inline static void atomic_thread_fence (memory_order order) noexcept
     { __atomic_thread_fence (order); }
-static inline void atomic_signal_fence (memory_order order) noexcept
+inline static void atomic_signal_fence (memory_order order) noexcept
     { __atomic_signal_fence (order); }
 
 } // namespace
@@ -357,7 +354,7 @@ union alignas(16) simd16_t {
     float	asf [4];
     double	asd [2];
 
-    static inline CONST constexpr auto zero (void) noexcept
+    inline static CONST constexpr auto zero (void) noexcept
 	{ return simd16_t {0,0,0,0}; }
 };
 

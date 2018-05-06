@@ -35,19 +35,19 @@ using iid_t = const char*;
 using methodid_t = const char*;
 
 // Methods are preceded by indexes to interface and next method
-static inline constexpr auto MethodInterfaceOffset (methodid_t mid)
+inline static constexpr auto MethodInterfaceOffset (methodid_t mid)
     { return uint8_t(mid[-1]); }
-static inline constexpr auto MethodNextOffset (methodid_t mid)
+inline static constexpr auto MethodNextOffset (methodid_t mid)
     { return uint8_t(mid[-2]); }
 
 // Interface name and methods are packed together for easy lookup
-static inline constexpr iid_t InterfaceOfMethod (methodid_t __restrict__ mid)
+inline static constexpr iid_t InterfaceOfMethod (methodid_t __restrict__ mid)
     { return mid-MethodInterfaceOffset(mid); }
-static inline constexpr auto InterfaceNameSize (iid_t iid)
+inline static constexpr auto InterfaceNameSize (iid_t iid)
     { return uint8_t(iid[-1]); }
 
 // Signatures immediately follow the method in the pack
-static inline const char* SignatureOfMethod (methodid_t __restrict__ mid)
+inline static const char* SignatureOfMethod (methodid_t __restrict__ mid)
     { return strnext(mid); }
 
 // When unmarshalling a message, convert method name to local pointer in the interface
