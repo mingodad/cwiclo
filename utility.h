@@ -97,7 +97,7 @@ public:
 
 /// Returns the number of elements in a static vector
 template <typename T, size_t N>
-inline constexpr auto ArraySize (T(&a)[N] [[maybe_unused]]) { return N; }
+inline constexpr auto ArraySize (T(&)[N]) { return N; }
 /// Returns the end() for a static vector
 template <typename T, size_t N>
 inline constexpr auto ArrayEnd (T(&a)[N]) { return &a[ArraySize(a)]; }
