@@ -14,7 +14,7 @@ template <typename T, T v>
 struct integral_constant {
     using value_type = T;
     using type = integral_constant<value_type,v>;
-    static constexpr const value_type value = v;
+    static constexpr const T value = v;
     constexpr operator value_type() const { return value; }
     constexpr auto operator()() const { return value; }
 };
