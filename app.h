@@ -111,7 +111,7 @@ public:
     using msgq_t	= vector<Msg>;
     enum { f_Quitting = Msger::f_Last, f_DebugMsgTrace, f_Last };
 public:
-    static auto&	Instance (void)			{ return *s_App; }
+    static auto&	Instance (void)			{ return *s_pApp; }
     static void		InstallSignalHandlers (void) noexcept;
     void		ProcessArgs (argc_t, argv_t)	{ }
     inline int		Run (void) noexcept;
@@ -236,7 +236,7 @@ private:
     vector<Msgerp>	_msgers;
     vector<Timer*>	_timers;
     string		_errors;
-    static App*		s_App;
+    static App*		s_pApp;
     static const MsgerImplements s_MsgerImpls[];
     static int		s_ExitCode;
     static uint32_t	s_ReceivedSignals;
@@ -253,8 +253,8 @@ App::App (void) noexcept
 ,_timers()
 ,_errors()
 {
-    assert (!s_App && "there must be only one App object");
-    s_App = this;
+    assert (!s_pApp && "there must be only one App object");
+    s_pApp = this;
     _msgers.emplace_back (this);
 }
 

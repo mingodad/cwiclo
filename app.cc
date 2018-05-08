@@ -25,7 +25,7 @@ auto PTimer::Now (void) noexcept -> mstime_t
 //}}}-------------------------------------------------------------------
 //{{{ App
 
-App*	App::s_App		= nullptr;	// static
+App*	App::s_pApp		= nullptr;	// static
 int	App::s_ExitCode		= EXIT_SUCCESS;	// static
 uint32_t App::s_ReceivedSignals	= 0;		// static
 atomic_flag App::s_outqLock = ATOMIC_FLAG_INIT;	// static
