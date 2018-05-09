@@ -27,21 +27,6 @@ extern "C" void* _alloc (size_t n) noexcept
     return p;
 }
 
-extern "C" void _free (void* p) noexcept
-    { free(p); }
-extern "C" void _free_n (void* p, size_t) noexcept
-    { free(p); }
-
-//----------------------------------------------------------------------
-
-void* operator new (size_t n)	WEAKALIAS("_alloc");
-void* operator new[] (size_t n)	WEAKALIAS("_alloc");
-
-void  operator delete (void* p) noexcept	WEAKALIAS("_free");
-void  operator delete[] (void* p) noexcept	WEAKALIAS("_free");
-void  operator delete (void* p, size_t n) noexcept	WEAKALIAS("_free_n");
-void  operator delete[] (void* p, size_t n) noexcept	WEAKALIAS("_free_n");
-
 //----------------------------------------------------------------------
 
 namespace std {

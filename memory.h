@@ -40,14 +40,20 @@ private:
 
 extern "C" void* _realloc (void* p, size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(2);
 extern "C" void* _alloc (size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(1);
-extern "C" void _free (void* p) noexcept;
 
-void* operator new (size_t n);
-void* operator new[] (size_t n);
-void  operator delete (void* p) noexcept;
-void  operator delete[] (void* p) noexcept;
-void  operator delete (void* p, size_t) noexcept;
-void  operator delete[] (void* p, size_t) noexcept;
+#if __clang__
+// clang may have reasons to want a delete symbol, but in cwiclo all
+// calls to new/delete must go to malloc/free anyway and no custom
+// allocators are supported. So just make the warning go away.
+#pragma GCC diagnostic ignored "-Winline-new-delete"
+#endif
+
+inline void* operator new (size_t n)			{ return _alloc(n); }
+inline void* operator new[] (size_t n)			{ return _alloc(n); }
+inline void  operator delete (void* p) noexcept		{ free(p); }
+inline void  operator delete[] (void* p) noexcept	{ free(p); }
+inline void  operator delete (void* p, size_t) noexcept	{ free(p); }
+inline void  operator delete[] (void* p, size_t) noexcept { free(p); }
 
 // Default placement versions of operator new.
 inline void* operator new (size_t, void* p)	{ return p; }
