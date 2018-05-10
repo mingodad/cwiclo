@@ -329,9 +329,30 @@ auto copy_n (II f, size_t n, OI r)
 {
     using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	return OI (__builtin_mempcpy (r, f, n*sizeof(ovalue_type)));
-    else for (ssize_t i = n; --i >= 0; ++r, ++f)
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
+#if __x86__
+	if constexpr (compile_constant(n))
+#endif
+	    return OI (__builtin_mempcpy (r, f, n*sizeof(ovalue_type)));
+#if __x86__
+#if __x86_64__
+	else if constexpr (!(sizeof(ovalue_type)%8)) {
+	    n *= sizeof(ovalue_type)/8;
+	    __asm__ volatile ("rep movsq":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	} else
+#endif
+	if constexpr (!(sizeof(ovalue_type)%4)) {
+	    n *= sizeof(ovalue_type)/4;
+	    __asm__ volatile ("rep movsl":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	} else if constexpr (!(sizeof(ovalue_type)%2)) {
+	    n *= sizeof(ovalue_type)/2;
+	    __asm__ volatile ("rep movsw":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	} else {
+	    n *= sizeof(ovalue_type);
+	     __asm__ volatile ("rep movsb":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	}
+#endif
+    } else for (ssize_t i = n; --i >= 0; ++r, ++f)
 	*r = *f;
     return r;
 }
@@ -349,43 +370,47 @@ auto copy (II f, II l, OI r)
 }
 
 template <typename II, typename OI>
-auto copy_backward (II f, II l, OI r)
+auto copy_backward_n (II f, size_t n, OI r)
 {
     using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
 #if __x86__
-	__asm__ volatile ("std":::"cc");
-	size_t n = l-f;
 	const char* cf = (const char*) &*(f+n);
 	char* cr = (char*) &*(r+n);
-	if constexpr (!(sizeof(ovalue_type)%2)) {
-	    n *= sizeof(ovalue_type)/2;
-	    cf -= 2; cr -= 2;
-	    __asm__ volatile ("rep movsw":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
-	} else if constexpr (!(sizeof(ovalue_type)%4)) {
-	    n *= sizeof(ovalue_type)/4;
-	    cf -= 4; cr -= 4;
-	    __asm__ volatile ("rep movsl":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
-	}
 #if __x86_64__
-	else if constexpr (!(sizeof(ovalue_type)%8)) {
-	    n *= sizeof(ovalue_type)/8;
-	    cf -= 8; cr -= 8;
-	    __asm__ volatile ("rep movsq":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
-	}
+	if constexpr (!(sizeof(ovalue_type)%8)) {
+	    n *= sizeof(ovalue_type)/8; cf -= 8; cr -= 8;
+	    __asm__ volatile ("std\n\trep movsq\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	} else
 #endif
-	else {
-	    n *= sizeof(ovalue_type);
-	    --cf; --cr;
-	     __asm__ volatile ("rep movsb":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	if constexpr (!(sizeof(ovalue_type)%4)) {
+	    n *= sizeof(ovalue_type)/4; cf -= 4; cr -= 4;
+	    __asm__ volatile ("std\n\trep movsl\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	} else if constexpr (!(sizeof(ovalue_type)%2)) {
+	    n *= sizeof(ovalue_type)/2; cf -= 2; cr -= 2;
+	    __asm__ volatile ("std\n\trep movsw\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	} else {
+	    n *= sizeof(ovalue_type); --cf; --cr;
+	     __asm__ volatile ("std\n\trep movsb\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
 	}
-	__asm__ volatile ("cld":::"cc");
 	return OI(cr);
 #else // !__x86__
-	return memmove (r, f, (l-f)*sizeof(ovalue_type));
+	return memmove (r, f, n*sizeof(ovalue_type));
 #endif
-    } else while (f < l)
+    } else while (n--)
+	r[n] = f[n];
+    return r;
+}
+
+template <typename II, typename OI>
+auto copy_backward (II f, II l, OI r)
+{
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	return copy_backward_n (f, l-f, r);
+    else while (f < l)
 	*--r = *--f;
     return r;
 }

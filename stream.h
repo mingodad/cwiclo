@@ -37,7 +37,7 @@ public:
     inline bool			aligned (streamsize g) const		{ return alignptr(g) == _p; }
     inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    memcpy (p, _p, sz); skip(sz);
+				    copy_n (_p, sz, p); skip(sz);
 				}
     const char*			read_strz (void) {
 				    const char* __restrict__ v = ptr<char>();
@@ -114,7 +114,7 @@ public:
     inline bool			aligned (streamsize g) const	{ return alignptr(g) == _p; }
     inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    _p = (pointer) mempcpy (_p, p, sz);
+				    _p = copy_n (p, sz, _p);
 				}
     inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>

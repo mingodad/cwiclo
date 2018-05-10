@@ -82,7 +82,7 @@ auto memlink::insert (const_iterator ii, size_type n) noexcept -> iterator
     assert (data() || !n);
     auto istart = const_cast<iterator>(ii), iend = istart + n;
     assert (istart >= begin() && iend <= end());
-    memmove (iend, istart, end()-iend);
+    copy_backward_n (istart, end()-iend, iend);
     return istart;
 }
 
@@ -91,7 +91,7 @@ auto memlink::erase (const_iterator ie, size_type n) noexcept -> iterator
     assert (data() || !n);
     auto istart = const_cast<iterator>(ie), iend = istart + n;
     assert (istart >= begin() && iend <= end());
-    memmove (istart, iend, end()-iend);
+    copy_n (iend, end()-iend, istart);
     return istart;
 }
 
@@ -105,7 +105,7 @@ void memblock::reserve (size_type sz) noexcept
     auto oldBlock (capacity() ? data() : nullptr);
     auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, sz));
     if (!oldBlock && data())
-	memcpy (newBlock, data(), min (size() + zero_terminated(), sz));
+	copy_n (data(), min (size() + zero_terminated(), sz), newBlock);
     link (newBlock, size());
     set_capacity (sz);
 }
@@ -122,10 +122,10 @@ void memblock::deallocate (void) noexcept
 void memblock::shrink_to_fit (void) noexcept
 {
     assert (capacity() && "call copy_link first");
-    const auto sz = size();
+    const auto sz = size()+zero_terminated();
     auto newBlock = reinterpret_cast<pointer> (realloc (data(), sz));
     if (newBlock || !sz) {
-	link (newBlock, sz);
+	link (newBlock, sz-zero_terminated());
 	set_capacity (sz);
     }
 }
@@ -141,7 +141,7 @@ void memblock::resize (size_type sz) noexcept
 void memblock::assign (const_pointer p, size_type sz) noexcept
 {
     resize (sz);
-    memcpy (data(), p, sz);
+    copy_n (p, sz, data());
 }
 
 auto memblock::insert (const_iterator start, size_type n) noexcept -> iterator
@@ -169,7 +169,7 @@ memblock::iterator memblock::replace (const_iterator ip, size_type ipn, const_po
 {
     auto dsz = difference_type(sn) - ipn;
     auto ipw = (dsz > 0 ? insert (ip, dsz) : erase (ip, -dsz));
-    memcpy (ipw, s, sn);
+    copy_n (s, sn, ipw);
     return ipw;
 }
 
