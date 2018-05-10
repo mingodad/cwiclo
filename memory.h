@@ -163,7 +163,7 @@ struct iterator_traits<const T*> {
 };
 template <>
 struct iterator_traits<void*> {
-    using value_type		= uint8_t;
+    using value_type		= char;
     using difference_type	= ptrdiff_t;
     using const_pointer		= const void*;
     using pointer		= void*;
@@ -172,7 +172,7 @@ struct iterator_traits<void*> {
 };
 template <>
 struct iterator_traits<const void*> {
-    using value_type		= uint8_t;
+    using value_type		= char;
     using difference_type	= ptrdiff_t;
     using const_pointer		= const void*;
     using pointer		= const_pointer;
@@ -327,8 +327,10 @@ inline void destroy_n (I f [[maybe_unused]], size_t n [[maybe_unused]]) noexcept
 template <typename II, typename OI>
 auto copy (II f, II l, OI r)
 {
-    if constexpr (is_trivially_copyable<typename iterator_traits<II>::value_type>::value)
-	memcpy (r, f, (l-f)*sizeof(*f));
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	memcpy (r, f, (l-f)*sizeof(ovalue_type));
     else for (; f < l; ++r, ++f)
 	*r = *f;
     return r;
@@ -337,10 +339,24 @@ auto copy (II f, II l, OI r)
 template <typename II, typename OI>
 auto copy_n (II f, size_t n, OI r)
 {
-    if constexpr (is_trivially_copyable<typename iterator_traits<II>::value_type>::value)
-	memcpy (r, f, n*sizeof(*f));
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	memcpy (r, f, n*sizeof(ovalue_type));
     else for (ssize_t i = n; --i >= 0; ++r, ++f)
 	*r = *f;
+    return r;
+}
+
+template <typename II, typename OI>
+auto copy_backward (II f, II l, OI r)
+{
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	memmove (r, f, (l-f)*sizeof(ovalue_type));
+    else while (f < l)
+	*--r = *--f;
     return r;
 }
 
@@ -373,7 +389,9 @@ T* rotate (T* f, T* m, T* l)
 template <typename II, typename OI>
 inline auto uninitialized_copy (II f, II l, OI r)
 {
-    if constexpr (is_same<II,OI>::value && is_trivially_copyable<typename iterator_traits<II>::value_type>::value)
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy (f, l, r);
     for (; f < l; ++r, ++f)
 	construct_at (&*r, *f);
@@ -384,7 +402,9 @@ inline auto uninitialized_copy (II f, II l, OI r)
 template <typename II, typename OI>
 inline auto uninitialized_copy_n (II f, ssize_t n, OI r)
 {
-    if constexpr (is_same<II,OI>::value && is_trivially_copyable<typename iterator_traits<II>::value_type>::value)
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_n (f, n, r);
     for (; --n >= 0; ++r, ++f)
 	construct_at (&*r, *f);
@@ -395,7 +415,9 @@ inline auto uninitialized_copy_n (II f, ssize_t n, OI r)
 template <typename II, typename OI>
 inline auto uninitialized_move (II f, II l, OI r)
 {
-    if constexpr (is_same<II,OI>::value && is_trivially_copyable<typename iterator_traits<II>::value_type>::value)
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy (f, l, r);
     for (; f < l; ++r, ++f)
 	construct_at (&*r, move(*f));
@@ -406,7 +428,9 @@ inline auto uninitialized_move (II f, II l, OI r)
 template <typename II, typename OI>
 inline auto uninitialized_move_n (II f, ssize_t n, OI r)
 {
-    if constexpr (is_same<II,OI>::value && is_trivially_copyable<typename iterator_traits<II>::value_type>::value)
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_n (f, n, r);
     for (; --n >= 0; ++r, ++f)
 	construct_at (&*r, move(*f));

@@ -70,13 +70,13 @@ extern "C" void brotate (void* vf, void* vm, void* vl) noexcept
 	return;
     auto t = alloca (hm);
     if (hsz < lsz) {
-	memcpy (t, m, hsz);
-	memmove (f+hsz, f, lsz);
-	memcpy (f, t, hsz);
+	copy_n (m, hsz, t);
+	copy_backward (f, f+lsz, f+hsz);
+	copy_n (t, hsz, f);
     } else {
-	memcpy (t, f, lsz);
-	memmove (f, m, hsz);
-	memcpy (l-lsz, t, lsz);
+	copy_n (f, lsz, t);
+	copy_backward (m, m+hsz, f);
+	copy_n (t, lsz, l-lsz);
     }
 }
 
@@ -124,18 +124,19 @@ extern "C" void print_backtrace (void) noexcept
 extern "C" void hexdump (const void* vp, size_t n) noexcept
 {
     auto p = (const uint8_t*) vp;
-    for (size_t i = 0; i < n; i += 16) {
+    for (auto i = 0u; i < n; i += 16) {
 	for (auto j = 0u; j < 16; ++j) {
 	    if (i+j < n)
 		printf ("%02x ", p[i+j]);
 	    else
 		printf ("   ");
 	}
-	for (auto j = 0u; j < 16; ++j) {
-	    if (i+j < n && p[i+j] >= ' ' && p[i+j] <= '~')
-		printf ("%c", p[i+j]);
+	for (auto j = 0u; j < 16 && i+j < n; ++j) {
+	    auto c = p[i+j];
+	    if (c >= ' ' && c <= '~')
+		putchar (c);
 	    else
-		printf (" ");
+		putchar (' ');
 	}
 	printf ("\n");
     }
