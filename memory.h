@@ -325,25 +325,25 @@ inline void destroy_n (I f [[maybe_unused]], size_t n [[maybe_unused]]) noexcept
 //{{{ copy and fill
 
 template <typename II, typename OI>
-auto copy (II f, II l, OI r)
-{
-    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
-    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	memcpy (r, f, (l-f)*sizeof(ovalue_type));
-    else for (; f < l; ++r, ++f)
-	*r = *f;
-    return r;
-}
-
-template <typename II, typename OI>
 auto copy_n (II f, size_t n, OI r)
 {
     using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	memcpy (r, f, n*sizeof(ovalue_type));
+	return OI (__builtin_mempcpy (r, f, n*sizeof(ovalue_type)));
     else for (ssize_t i = n; --i >= 0; ++r, ++f)
+	*r = *f;
+    return r;
+}
+
+template <typename II, typename OI>
+auto copy (II f, II l, OI r)
+{
+    using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
+    using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	return copy_n (f, l-f, r);
+    else for (; f < l; ++r, ++f)
 	*r = *f;
     return r;
 }
@@ -353,9 +353,39 @@ auto copy_backward (II f, II l, OI r)
 {
     using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	memmove (r, f, (l-f)*sizeof(ovalue_type));
-    else while (f < l)
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
+#if __x86__
+	__asm__ volatile ("std":::"cc");
+	size_t n = l-f;
+	const char* cf = (const char*) &*(f+n);
+	char* cr = (char*) &*(r+n);
+	if constexpr (!(sizeof(ovalue_type)%2)) {
+	    n *= sizeof(ovalue_type)/2;
+	    cf -= 2; cr -= 2;
+	    __asm__ volatile ("rep movsw":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	} else if constexpr (!(sizeof(ovalue_type)%4)) {
+	    n *= sizeof(ovalue_type)/4;
+	    cf -= 4; cr -= 4;
+	    __asm__ volatile ("rep movsl":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	}
+#if __x86_64__
+	else if constexpr (!(sizeof(ovalue_type)%8)) {
+	    n *= sizeof(ovalue_type)/8;
+	    cf -= 8; cr -= 8;
+	    __asm__ volatile ("rep movsq":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	}
+#endif
+	else {
+	    n *= sizeof(ovalue_type);
+	    --cf; --cr;
+	     __asm__ volatile ("rep movsb":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
+	}
+	__asm__ volatile ("cld":::"cc");
+	return OI(cr);
+#else // !__x86__
+	return memmove (r, f, (l-f)*sizeof(ovalue_type));
+#endif
+    } else while (f < l)
 	*--r = *--f;
     return r;
 }
