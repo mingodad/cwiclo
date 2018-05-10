@@ -26,16 +26,18 @@ public:
 public:
     inline constexpr		cmemlink (const_pointer p, size_type n, bool z = false)	: _data(const_cast<pointer>(p)), _size(n), _capz(z) {}
     inline			cmemlink (const void* p, size_type n)	: cmemlink (reinterpret_cast<const_pointer>(p), n) {}
-#if __SSE2__ && NDEBUG		// SSE optimizations result in simd16_t member, which is very large viewed in the debugger, so turn it off in unoptimized builds
+#if __SSE2__ && NDEBUG		// turn off _sblk union member for debugging
     inline constexpr		cmemlink (void)				: _sblk (simd16_t::zero()) {}
     inline constexpr		cmemlink (const cmemlink& v)		: _sblk (v._sblk) {}
     inline constexpr		cmemlink (cmemlink&& v)			: _sblk (exchange (v._sblk, simd16_t::zero())) {}
     void			swap (cmemlink&& v)			{ ::cwiclo::swap (_sblk, v._sblk); }
+    inline void			unlink (void)				{ auto zt = _zerot; _sblk = simd16_t::zero(); _capz = zt; }
 #else
     inline constexpr		cmemlink (void)				: cmemlink (nullptr, 0, false) {}
     inline constexpr		cmemlink (const cmemlink& v)		: cmemlink (v._data, v._size, v._zerot) {}
     inline constexpr		cmemlink (cmemlink&& v)			: _data (exchange (v._data, nullptr)), _size (exchange (v._size, 0u)), _capz (exchange (v._capz, 0u)) {}
     void			swap (cmemlink&& v)			{ ::cwiclo::swap (_data, v._data); ::cwiclo::swap (_size, v._size); ::cwiclo::swap (_capz, v._capz); }
+    inline void			unlink (void)				{ _data = nullptr; _size = 0; _capacity = 0; }
 #endif
     inline auto&		operator= (const cmemlink& v)		{ link (v); return *this; }
     inline auto&		operator= (cmemlink&& v)		{ swap (move(v)); return *this; }
@@ -59,7 +61,6 @@ public:
     inline void			link (pointer p, size_type n, bool z)		{ link(p,n); _zerot = z; }
     inline void			link (const_pointer p, size_type n, bool z)	{ link (const_cast<pointer>(p), n, z); }
     inline void			link (const cmemlink& v)			{ link (v.begin(), v.size(), v.zero_terminated()); }
-    inline void			unlink (void)				{ _data = nullptr; _size = 0; _capacity = 0; }
     inline void			resize (size_type sz)			{ _size = sz; }
     inline void			clear (void)				{ resize(0); }
     void			link_read (istream& is, size_type elsize = sizeof(value_type)) noexcept;

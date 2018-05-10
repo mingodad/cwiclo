@@ -97,37 +97,34 @@ auto memlink::erase (const_iterator ie, size_type n) noexcept -> iterator
 
 //----------------------------------------------------------------------
 
-void memblock::reserve (size_type sz) noexcept
+void memblock::reserve (size_type cap) noexcept
 {
-    if ((sz += zero_terminated()) <= capacity())
+    if ((cap += zero_terminated()) <= capacity())
 	return;
-    sz = NextPow2 (sz);
+    cap = NextPow2 (cap);
     auto oldBlock (capacity() ? data() : nullptr);
-    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, sz));
+    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, cap));
     if (!oldBlock && data())
-	copy_n (data(), min (size() + zero_terminated(), sz), newBlock);
+	copy_n (data(), min (size() + zero_terminated(), cap), newBlock);
     link (newBlock, size());
-    set_capacity (sz);
+    set_capacity (cap);
 }
 
 void memblock::deallocate (void) noexcept
 {
-    if (capacity()) {
+    if (capacity())
 	assert (data() && "Internal error: space allocated, but the pointer is nullptr");
-	free (data());
-    }
+    auto d = capacity() ? data() : nullptr;
     unlink();
+    free (d);
 }
 
 void memblock::shrink_to_fit (void) noexcept
 {
     assert (capacity() && "call copy_link first");
-    const auto sz = size()+zero_terminated();
-    auto newBlock = reinterpret_cast<pointer> (realloc (data(), sz));
-    if (newBlock || !sz) {
-	link (newBlock, sz-zero_terminated());
-	set_capacity (sz);
-    }
+    auto cap = size()+zero_terminated();
+    set_capacity (cap);
+    link (pointer (_realloc (data(), cap)), size());
 }
 
 void memblock::resize (size_type sz) noexcept
@@ -149,10 +146,7 @@ auto memblock::insert (const_iterator start, size_type n) noexcept -> iterator
     const auto ip = start - begin();
     assert (ip <= size());
     resize (size() + n);
-    memlink::insert (iat(ip), n);
-    if (zero_terminated())
-	*end() = 0;
-    return iat (ip);
+    return memlink::insert (iat(ip), n);
 }
 
 /// Shifts the data in the linked block from \p start + \p n to \p start.

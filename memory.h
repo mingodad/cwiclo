@@ -339,9 +339,9 @@ auto copy_n (II f, size_t n, OI r)
 	else if constexpr (!(sizeof(ovalue_type)%8)) {
 	    n *= sizeof(ovalue_type)/8;
 	    __asm__ volatile ("rep movsq":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
-	} else
+	}
 #endif
-	if constexpr (!(sizeof(ovalue_type)%4)) {
+	else if constexpr (!(sizeof(ovalue_type)%4)) {
 	    n *= sizeof(ovalue_type)/4;
 	    __asm__ volatile ("rep movsl":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
 	} else if constexpr (!(sizeof(ovalue_type)%2)) {

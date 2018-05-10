@@ -71,11 +71,11 @@ extern "C" void brotate (void* vf, void* vm, void* vl) noexcept
     auto t = alloca (hm);
     if (hsz < lsz) {
 	copy_n (m, hsz, t);
-	copy_backward (f, f+lsz, f+hsz);
+	copy_backward_n (f, lsz, f+hsz);
 	copy_n (t, hsz, f);
     } else {
 	copy_n (f, lsz, t);
-	copy_backward (m, m+hsz, f);
+	copy_backward_n (m, hsz, f);
 	copy_n (t, lsz, l-lsz);
     }
 }
