@@ -148,7 +148,7 @@ public:
     inline void			copy_link (void) noexcept		{ resize (size()); }
     iterator			insert (const_iterator start, size_type n) noexcept;
     auto			insert (const_iterator ip, const_pointer s, size_type n)
-				    { return copy_n (s, n, insert (ip, n)); }
+				    { auto ipw = insert (ip,n); copy_n (s, n, ipw); return ipw; }
     void		   	append (const_pointer s, size_type n)	{ insert (end(), s, n); }
     iterator			erase (const_iterator start, size_type n) noexcept;
     iterator			replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept;
