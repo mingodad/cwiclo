@@ -240,7 +240,6 @@ private:
     static const MsgerImplements s_MsgerImpls[];
     static int		s_ExitCode;
     static uint32_t	s_ReceivedSignals;
-    static atomic_flag	s_outqLock;
 };
 
 //----------------------------------------------------------------------
@@ -321,13 +320,11 @@ void App::Timer::Timer_Watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t ti
 
 Msg& App::CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid, Msg::fdoffset_t fdo) noexcept
 {
-    atomic_scope_lock qlock (s_outqLock);
     return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo);
 }
 
 void App::ForwardMsg (Msg&& msg, Msg::Link& l) noexcept
 {
-    atomic_scope_lock qlock (s_outqLock);
     _outq.emplace_back (move(msg), CreateLink(l,msg.Interface()));
 }
 
