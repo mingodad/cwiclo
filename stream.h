@@ -56,6 +56,14 @@ public:
     template <typename T>
     inline void			read_trivial (T& v) __restrict__ { v = read_trivial<T>(); }
     template <typename T>
+    inline void			read_trivial_unaligned (T& v) __restrict__ {
+				    #if __x86__
+					v = read_trivial (v);
+				    #else
+					read (&v, sizeof(v));
+				    #endif
+				}
+    template <typename T>
     inline istream&		operator>> (T& v) {
 				    if constexpr (is_trivial<T>::value)
 					read_trivial (v);
@@ -124,6 +132,14 @@ public:
 				    _p += sizeof(T);
 				}
     template <typename T>
+    inline void			write_trivial_unaligned (const T& v) __restrict__ {
+				    #if __x86__
+					write_trivial (v);
+				    #else
+					write (&v, sizeof(v));
+				    #endif
+				}
+    template <typename T>
     inline ostream&		operator<< (const T& v) {
 				    if constexpr (is_trivial<T>::value)
 					write_trivial (v);
@@ -165,6 +181,8 @@ public:
     inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>
     inline void			write_trivial (const T& v)	{ write (&v, sizeof(v)); }
+    template <typename T>
+    inline void			write_trivial_unaligned (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
     inline sstream&		operator<< (const T& v) {
 				    if constexpr (is_trivial<T>::value)
