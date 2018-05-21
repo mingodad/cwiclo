@@ -41,7 +41,7 @@ public:
 				}
     const char*			read_strz (void) {
 				    const char* __restrict__ v = ptr<char>();
-				    auto se = (pointer) memchr (v, 0, remaining());
+				    auto se = static_cast<pointer>(memchr (v, 0, remaining()));
 				    if (!se)
 					return nullptr;
 				    seek (se+1);

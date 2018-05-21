@@ -238,6 +238,8 @@ private:
     public:
 	RelayProxy (mrid_t src, mrid_t dest, mrid_t eid)
 	    : pRelay(), relay(src,dest), extid(eid) {}
+	RelayProxy (const RelayProxy&) = delete;
+	void operator= (const RelayProxy&) = delete;
     };
     //}}}2--------------------------------------------------------------
 private:

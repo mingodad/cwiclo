@@ -68,12 +68,12 @@ auto PExtern::ConnectLocal (const char* path) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
+    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
     DEBUG_PRINTF ("[X] Connecting to socket %s\n", addr.sun_path);
-    return Connect ((const sockaddr*) &addr, sizeof(addr));
+    return Connect (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
 }
 
 /// Create local socket of the given name in the system standard location for such
@@ -81,12 +81,12 @@ auto PExtern::ConnectSystemLocal (const char* sockname) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
+    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
     DEBUG_PRINTF ("[X] Connecting to socket %s\n", addr.sun_path);
-    return Connect ((const sockaddr*) &addr, sizeof(addr));
+    return Connect (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
 }
 
 /// Create local socket of the given name in the user standard location for such
@@ -97,12 +97,12 @@ auto PExtern::ConnectUserLocal (const char* sockname) noexcept -> fd_t
     const char* runtimeDir = getenv ("XDG_RUNTIME_DIR");
     if (!runtimeDir)
 	runtimeDir = _PATH_TMP;
-    if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
+    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
     DEBUG_PRINTF ("[X] Connecting to socket %s\n", addr.sun_path);
-    return Connect ((const sockaddr*) &addr, sizeof(addr));
+    return Connect (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
 }
 
 auto PExtern::ConnectIP4 (in_addr_t ip, in_port_t port) noexcept -> fd_t
@@ -123,7 +123,7 @@ auto PExtern::ConnectIP4 (in_addr_t ip, in_port_t port) noexcept -> fd_t
 	DEBUG_PRINTF ("[X] Connecting to socket %s:%hu\n", inet_ntop(PF_INET, &addr.sin_addr, addrbuf, sizeof(addrbuf)), port);
     #endif
 #endif
-    return Connect ((const sockaddr*) &addr, sizeof(addr));
+    return Connect (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
 }
 
 /// Create local IPv4 socket at given port on the loopback interface
@@ -141,7 +141,7 @@ auto PExtern::ConnectIP6 (in6_addr ip, in_port_t port) noexcept -> fd_t
     char addrbuf [128];
     DEBUG_PRINTF ("[X] Connecting to socket %s:%hu\n", inet_ntop(PF_INET6, &addr.sin6_addr, addrbuf, sizeof(addrbuf)), port);
 #endif
-    return Connect ((const sockaddr*) &addr, sizeof(addr));
+    return Connect (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
 }
 
 /// Create local IPv6 socket at given ip and port
@@ -152,7 +152,7 @@ auto PExtern::ConnectLocalIP6 (in_port_t port) noexcept -> fd_t
     addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
     addr.sin6_port = port;
     DEBUG_PRINTF ("[X] Connecting to socket localhost6:%hu\n", port);
-    return Connect ((const sockaddr*) &addr, sizeof(addr));
+    return Connect (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
 }
 
 auto PExtern::LaunchPipe (const char* exe, const char* arg) noexcept -> fd_t
@@ -399,7 +399,7 @@ bool Extern::AttachToSocket (fd_t fd) noexcept
     // And it must match the family (PF_LOCAL or PF_INET)
     sockaddr_storage ss;
     l = sizeof(ss);
-    if (getsockname (fd, (sockaddr*) &ss, &l) < 0)
+    if (getsockname (fd, reinterpret_cast<sockaddr*>(&ss), &l) < 0)
 	return false;
     _einfo.isUnixSocket = false;
     if (ss.ss_family == PF_LOCAL)
@@ -847,7 +847,7 @@ auto PExternServer::Bind (const sockaddr* addr, socklen_t addrlen, const iid_t* 
 	return -1;
     }
     if (addr->sa_family == PF_LOCAL)
-	_sockname = ((const sockaddr_un*)addr)->sun_path;
+	_sockname = reinterpret_cast<const sockaddr_un*>(addr)->sun_path;
     Open (fd, eifaces, WhenEmpty::Remain);
     return fd;
 }
@@ -857,12 +857,12 @@ auto PExternServer::BindLocal (const char* path, const iid_t* eifaces) noexcept 
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
+    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
     DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    auto fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    auto fd = Bind (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), eifaces);
     if (0 > chmod (addr.sun_path, DEFFILEMODE))
 	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
     return fd;
@@ -873,12 +873,12 @@ auto PExternServer::BindSystemLocal (const char* sockname, const iid_t* eifaces)
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
+    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
     DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    auto fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    auto fd = Bind (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), eifaces);
     if (0 > chmod (addr.sun_path, DEFFILEMODE))
 	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
     return fd;
@@ -892,12 +892,12 @@ auto PExternServer::BindUserLocal (const char* sockname, const iid_t* eifaces) n
     const char* runtimeDir = getenv ("XDG_RUNTIME_DIR");
     if (!runtimeDir)
 	runtimeDir = _PATH_TMP;
-    if ((int) ArraySize(addr.sun_path) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
+    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
     DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    auto fd = Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    auto fd = Bind (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), eifaces);
     if (0 > chmod (addr.sun_path, S_IRUSR| S_IWUSR))
 	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
     return fd;
@@ -914,7 +914,7 @@ auto PExternServer::BindIP4 (in_addr_t ip, in_port_t port, const iid_t* eifaces)
 	addr.sin_addr = { ip };
     #endif
     addr.sin_port = port;
-    return Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    return Bind (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), eifaces);
 }
 
 /// Create local IPv4 socket at given port on the loopback interface
@@ -928,7 +928,7 @@ auto PExternServer::BindIP6 (in6_addr ip, in_port_t port, const iid_t* eifaces) 
     addr.sin6_family = PF_INET6;
     addr.sin6_addr = ip;
     addr.sin6_port = port;
-    return Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    return Bind (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), eifaces);
 }
 
 /// Create local IPv6 socket at given ip and port
@@ -938,7 +938,7 @@ auto PExternServer::BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept
     addr.sin6_family = PF_INET6;
     addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
     addr.sin6_port = port;
-    return Bind ((const sockaddr*) &addr, sizeof(addr), eifaces);
+    return Bind (reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), eifaces);
 }
 
 //}}}-------------------------------------------------------------------
@@ -1002,7 +1002,7 @@ void ExternServer::ExternServer_Open (int fd, const iid_t* eifaces, PExternServe
 	return ErrorLibc ("fcntl(SETFL(O_NONBLOCK))");
     _sockfd = fd;
     _eifaces = eifaces;
-    SetFlag (f_CloseWhenEmpty, (bool) closeWhenEmpty);
+    SetFlag (f_CloseWhenEmpty, static_cast<bool>(closeWhenEmpty));
     TimerR_Timer (_sockfd);
 }
 

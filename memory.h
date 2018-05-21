@@ -376,8 +376,8 @@ auto copy_backward_n (II f, size_t n, OI r)
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
 #if __x86__
-	const char* cf = (const char*) &*(f+n);
-	char* cr = (char*) &*(r+n);
+	const char* cf = reinterpret_cast<const char*>(&*(f+n));
+	char* cr = reinterpret_cast<char*>(&*(r+n));
 #if __x86_64__
 	if constexpr (!(sizeof(ovalue_type)%8)) {
 	    n *= sizeof(ovalue_type)/8; cf -= 8; cr -= 8;
@@ -566,8 +566,8 @@ auto upper_bound (I f, I l, const T& v)
 template <typename T>
 int c_compare (const void* p1, const void* p2)
 {
-    auto& v1 = *(const T*) p1;
-    auto& v2 = *(const T*) p2;
+    auto& v1 = *static_cast<const T*>(p1);
+    auto& v2 = *static_cast<const T*>(p2);
     return v1 < v2 ? -1 : (v2 < v1 ? 1 : 0);
 }
 

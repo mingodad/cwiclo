@@ -133,12 +133,12 @@ inline static NONNULL() auto strnext (char* s)
     { unsigned n = UINT_MAX; return strnext_r(s,n); }
 
 template <typename T> inline constexpr auto advance (T* p, ptrdiff_t n) { return p + n; }
-template <> inline auto advance (void* p, ptrdiff_t n) { return advance ((char*)p, n); }
-template <> inline auto advance (const void* p, ptrdiff_t n) { return advance ((const char*)p, n); }
+template <> inline auto advance (void* p, ptrdiff_t n) { return advance (static_cast<char*>(p), n); }
+template <> inline auto advance (const void* p, ptrdiff_t n) { return advance (static_cast<const char*>(p), n); }
 
 template <typename T> inline constexpr auto distance (T* f, T* l) { return l-f; }
-template <> inline auto distance (void* f, void* l) { return distance ((char*)f, (char*)l); }
-template <> inline auto distance (const void* f, const void* l) { return distance ((const char*)f, (const char*)l); }
+template <> inline auto distance (void* f, void* l) { return distance (static_cast<char*>(f), static_cast<char*>(l)); }
+template <> inline auto distance (const void* f, const void* l) { return distance (static_cast<const char*>(f), static_cast<const char*>(l)); }
 
 //}}}----------------------------------------------------------------------
 //{{{ bswap

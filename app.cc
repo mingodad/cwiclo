@@ -305,7 +305,7 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
 	    if (npfd >= pfdsz)
 		break;
 	    pfd[npfd].fd = t->Fd();
-	    pfd[npfd].events = (int) t->Cmd();
+	    pfd[npfd].events = int(t->Cmd());
 	    pfd[npfd++].revents = 0;
 	}
     }
@@ -327,7 +327,7 @@ void App::CheckPollTimers (const pollfd* fds) noexcept
     for (auto t : _timers) {
 	bool timerExpired = t->NextFire() <= now,
 	    hasFd = (t->Fd() >= 0 && t->Cmd() != PTimer::WatchCmd::Stop),
-	    fdFired = hasFd && (cfd->revents & (POLLERR| (int)t->Cmd()));
+	    fdFired = hasFd && (cfd->revents & (POLLERR| int(t->Cmd())));
 
 	// Log the firing if tracing
 	if (DEBUG_MSG_TRACE) {

@@ -172,7 +172,7 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
 unsigned sd_listen_fds (void) noexcept
 {
     const char* e = getenv("LISTEN_PID");
-    if (!e || getpid() != (pid_t) strtoul (e, nullptr, 10))
+    if (!e || getpid() != pid_t(strtoul (e, nullptr, 10)))
 	return 0;
     e = getenv("LISTEN_FDS");
     return e ? strtoul (e, nullptr, 10) : 0;
