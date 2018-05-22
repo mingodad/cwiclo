@@ -32,7 +32,7 @@ public:
     inline constexpr		vector (const T (&a)[N])	: _data (a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
     inline			vector (initlist_t v) noexcept;
     constexpr			vector (vector&& v)		: _data (move(v._data)) {}
-    inline			~vector (void) noexcept		{ destroy (begin(), end()); }
+    inline			~vector (void) noexcept		{ if (!is_linked()) destroy (begin(), end()); }
     inline auto&		operator= (const vector& v)	{ assign (v); return *this; }
     inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (initlist_t v)	{ assign (v); return *this; }
@@ -66,9 +66,9 @@ public:
     constexpr auto&		front (void) const		{ assert (!empty()); return at(0); }
     inline auto&		back (void)			{ assert (!empty()); return end()[-1]; }
     constexpr auto&		back (void) const		{ assert (!empty()); return end()[-1]; }
-    inline void			clear (void)			{ destroy (begin(), end()); _data.clear(); }
+    inline void			clear (void)			{ if (!is_linked()) destroy (begin(), end()); _data.clear(); }
     inline void			swap (vector&& v)		{ _data.swap (move(v._data)); }
-    inline void			deallocate (void) noexcept	{ destroy (begin(), end()); _data.deallocate(); }
+    inline void			deallocate (void) noexcept	{ assert (!is_linked()); destroy (begin(), end()); _data.deallocate(); }
     inline void			shrink_to_fit (void) noexcept	{ _data.shrink_to_fit(); }
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
     inline void			assign (vector&& v)		{ swap (v); }
