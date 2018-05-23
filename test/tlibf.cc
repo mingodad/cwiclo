@@ -80,6 +80,12 @@ static void TestUtility (void)
     printf ("Square(3) = %u\n", Square(3));
     printf ("Square(-4) = %u\n\n", Square(-4));
 
+    printf ("FirstBit(0) = %d\n", FirstBit(0));
+    printf ("FirstBit(1) = %d\n", FirstBit(1));
+    printf ("FirstBit(4) = %d\n", FirstBit(4));
+    printf ("FirstBit(3827) = %d\n", FirstBit(3827));
+    printf ("FirstBit(0xFFFFFFF0) = %d\n\n", FirstBit(0xFFFFFFF0));
+
     printf ("NextPow2(0) = %d\n", NextPow2(0));
     printf ("NextPow2(1) = %d\n", NextPow2(1));
     printf ("NextPow2(4) = %d\n", NextPow2(4));

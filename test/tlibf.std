@@ -26,6 +26,12 @@ DivRound(-1,7) = 0
 Square(3) = 9
 Square(-4) = 16
 
+FirstBit(0) = 0
+FirstBit(1) = 0
+FirstBit(4) = 2
+FirstBit(3827) = 11
+FirstBit(0xFFFFFFF0) = 31
+
 NextPow2(0) = 1
 NextPow2(1) = 2
 NextPow2(4) = 4

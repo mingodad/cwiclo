@@ -235,11 +235,11 @@ inline constexpr auto Ror (T v, remove_reference_t<T> n)
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>
-inline auto FirstBit (T v, remove_reference_t<T> nbv)
+inline auto FirstBit (T v, remove_reference_t<T> nbv = 0)
 {
     auto n = nbv;
 #if __x86__
-    if (!compile_constant(v)) __asm__("bsr\t%1, %0":"+r"(n):"rm"(v)); else
+    if constexpr (!compile_constant(v)) __asm__("bsr\t%1, %0":"+r"(n):"rm"(v)); else
 #endif
     if (v) n = (bits_in_type<T>::value-1) - __builtin_clz(v);
     return n;
@@ -250,9 +250,9 @@ inline T NextPow2 (T v)
 {
     T r = v-1;
 #if __x86__
-    if (!compile_constant(r)) __asm__("bsr\t%0, %0":"+r"(r)); else
+    if constexpr (!compile_constant(r)) __asm__("bsr\t%0, %0":"+r"(r)); else
 #endif
-    { r = FirstBit(r,r); if (r >= bits_in_type<T>::value-1) r = T(-1); }
+    { r = FirstBit(r,r); if (r >= T(bits_in_type<T>::value-1)) r = T(-1); }
     return 1<<(1+r);
 }
 
