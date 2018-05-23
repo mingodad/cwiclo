@@ -198,7 +198,6 @@ public:
     inline constexpr		unique_ptr (void)		: _p (nullptr) {}
     inline constexpr explicit	unique_ptr (pointer p)		: _p (p) {}
     inline			unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
-				unique_ptr (const unique_ptr&) = delete;
     inline			~unique_ptr (void)		{ delete _p; }
     inline constexpr auto	get (void) const		{ return _p; }
     inline auto			release (void)			{ return exchange (_p, nullptr); }
@@ -207,7 +206,6 @@ public:
     inline constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
     inline auto&		operator= (pointer p)		{ reset (p); return *this; }
     inline auto&		operator= (unique_ptr&& p)	{ reset (p.release()); return *this; }
-    void			operator=(const unique_ptr&) = delete;
     inline constexpr auto&	operator* (void) const		{ return *get(); }
     inline constexpr auto	operator-> (void) const		{ return get(); }
     inline constexpr bool	operator== (const pointer p) const	{ return _p == p; }
@@ -231,8 +229,6 @@ public:
     inline		scope_exit (scope_exit&& f) noexcept	: _f(move(f._f)),_enabled(f._enabled) { f.release(); }
     inline void		release (void) noexcept			{ _enabled = false; }
     inline		~scope_exit (void) noexcept (noexcept (declval<F>()))	{ if (_enabled) _f(); }
-			scope_exit (const scope_exit&) = delete;
-    scope_exit&		operator= (const scope_exit&) = delete;
     scope_exit&		operator= (scope_exit&&) = delete;
 private:
     F		_f;
@@ -286,13 +282,7 @@ auto uninitialized_default_construct (I f, I l)
 /// Calls the placement new on \p p.
 template <typename I>
 auto uninitialized_default_construct_n (I f, size_t n)
-{
-    if constexpr (is_trivially_constructible<typename iterator_traits<I>::value_type>::value)
-	memset (f, 0, n*sizeof(*f));
-    else for (ssize_t i = n; --i >= 0; ++f)
-	construct_at (f);
-    return f;
-}
+    { return uninitialized_default_construct (f, f+n); }
 
 /// Calls the destructor on elements in range [f, l) without calling delete.
 template <typename I>
@@ -310,16 +300,8 @@ void destroy (I f [[maybe_unused]], I l [[maybe_unused]]) noexcept
 
 /// Calls the destructor on elements in range [f, f+n) without calling delete.
 template <typename I>
-inline void destroy_n (I f [[maybe_unused]], size_t n [[maybe_unused]]) noexcept
-{
-    if constexpr (!is_trivially_destructible<typename iterator_traits<I>::value_type>::value) {
-	for (ssize_t i = n; --i >= 0; ++f)
-	    destroy_at (f);
-    }
-#ifndef NDEBUG
-    else memset (f, 0xcd, n*sizeof(*f));
-#endif
-}
+inline void destroy_n (I f, size_t n) noexcept
+    { return destroy (f, f+n); }
 
 //}}}-------------------------------------------------------------------
 //{{{ copy and fill
@@ -352,7 +334,7 @@ auto copy_n (II f, size_t n, OI r)
 	     __asm__ volatile ("rep movsb":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
 	}
 #endif
-    } else for (ssize_t i = n; --i >= 0; ++r, ++f)
+    } else for (auto l = f+n; f < l; ++r, ++f)
 	*r = *f;
     return r;
 }
@@ -411,7 +393,7 @@ auto copy_backward (II f, II l, OI r)
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_backward_n (f, l-f, r);
     else while (f < l)
-	*--r = *--f;
+	*--r = *--l;
     return r;
 }
 
@@ -425,11 +407,7 @@ auto fill (I f, I l, const T& v)
 
 template <typename I, typename T>
 auto fill_n (I f, size_t n, const T& v)
-{
-    for (ssize_t i = n; --i >= 0; ++f)
-	*f = v;
-    return f;
-}
+    { return fill (f, f+n, v); }
 
 extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
 
@@ -455,14 +433,14 @@ inline auto uninitialized_copy (II f, II l, OI r)
 
 /// Copies [f, f + n) into r by calling copy constructors in r.
 template <typename II, typename OI>
-inline auto uninitialized_copy_n (II f, ssize_t n, OI r)
+inline auto uninitialized_copy_n (II f, size_t n, OI r)
 {
     using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_n (f, n, r);
-    for (; --n >= 0; ++r, ++f)
-	construct_at (&*r, *f);
+    for (auto i = 0u; i < n; ++i)
+	construct_at (&r[i], f[i]);
     return r;
 }
 
@@ -481,14 +459,14 @@ inline auto uninitialized_move (II f, II l, OI r)
 
 /// Copies [f, f + n) into r by calling move constructors in r.
 template <typename II, typename OI>
-inline auto uninitialized_move_n (II f, ssize_t n, OI r)
+inline auto uninitialized_move_n (II f, size_t n, OI r)
 {
     using ivalue_type = remove_inner_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_n (f, n, r);
-    for (; --n >= 0; ++r, ++f)
-	construct_at (&*r, move(*f));
+    for (auto i = 0u; i < n; ++i)
+	construct_at (&r[i], move(f[i]));
     return r;
 }
 
@@ -502,10 +480,10 @@ inline void uninitialized_fill (I f, I l, const T& v)
 
 /// Calls construct on all elements in [f, f + n) with value \p v.
 template <typename I, typename T>
-inline auto uninitialized_fill_n (I f, ssize_t n, const T& v)
+inline auto uninitialized_fill_n (I f, size_t n, const T& v)
 {
-    for (; --n >= 0; ++f)
-	construct_at (&*f, v);
+    for (auto i = 0u; i < n; ++i)
+	construct_at (&f[i], v);
     return f;
 }
 

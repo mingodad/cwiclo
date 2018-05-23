@@ -174,10 +174,9 @@ inline constexpr auto max (const T& a, const remove_reference_t<T>& b)
 
 template <typename T>
 inline constexpr bool is_negative (const T& v) {
-    if constexpr (is_signed<T>::value)
-	return v < 0;
-    else
+    if constexpr (!is_signed<T>::value)
 	return false;
+    return v < 0;
 }
 template <typename T>
 inline constexpr auto sign (T v)
