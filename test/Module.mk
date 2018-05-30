@@ -21,7 +21,7 @@ test/check:	${test/TESTS}
 	@for i in ${test/TESTS}; do \
 	    TEST="test/$$(basename $$i)";\
 	    echo "Running $$TEST";\
-	    PATH="$Otest" $$i < $$TEST.cc &> $$i.out;\
+	    PATH="$Otest" $$i < $$TEST.cc > $$i.out 2>&1;\
 	    diff $$TEST.std $$i.out && rm -f $$i.out;\
 	done
 

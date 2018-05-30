@@ -8,6 +8,8 @@
 
 namespace cwiclo {
 
+class lstring;
+
 class string : public memblock {
 public:
     inline		string (void)					: memblock() { set_zero_terminated(); }
@@ -66,6 +68,7 @@ public:
     inline bool		operator> (const_reference c) const		{ return 0 < compare (begin(), end(), &c, &c + 1); }
     inline bool		operator<= (const_pointer s) const		{ return 0 >= compare (s); }
     inline bool		operator>= (const_pointer s) const		{ return 0 <= compare (s); }
+    inline		operator const lstring& (void) const		{ return reinterpret_cast<const lstring&>(*this); }
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
     inline void		pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
