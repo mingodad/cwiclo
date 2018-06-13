@@ -112,8 +112,7 @@ void memblock::reserve (size_type cap) noexcept
 
 void memblock::deallocate (void) noexcept
 {
-    if (capacity())
-	assert (data() && "Internal error: space allocated, but the pointer is nullptr");
+    assert ((!capacity() || data()) && "Internal error: space allocated, but the pointer is nullptr");
     auto d = capacity() ? data() : nullptr;
     unlink();
     free (d);

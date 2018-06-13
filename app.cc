@@ -32,8 +32,8 @@ uint32_t App::s_ReceivedSignals	= 0;		// static
 App::~App (void) noexcept
 {
     // Delete Msgers in reverse order of creation
-    while (!_msgers.empty())
-	_msgers.pop_back();
+    for (mrid_t mid = _msgers.size(); mid--;)
+	DeleteMsger (mid);
     if (!_errors.empty())
 	fprintf (stderr, "Error: %s\n", _errors.c_str());
 }
@@ -103,8 +103,8 @@ void App::Errorv (const char* fmt, va_list args) noexcept
 
 bool App::ForwardError (mrid_t oid, mrid_t eoid) noexcept
 {
-    auto& m = MsgerpById (oid);
-    if (!m.created())
+    auto m = MsgerpById (oid);
+    if (!m)
 	return false;
     if (m->OnError (eoid, Errors())) {
 	_errors.clear();	// error handled; clear message
@@ -119,23 +119,39 @@ bool App::ForwardError (mrid_t oid, mrid_t eoid) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Msger lifecycle
 
-mrid_t App::AllocateMrid (void) noexcept
+mrid_t App::AllocateMrid (mrid_t creator) noexcept
 {
+    assert (ValidMsgerId (creator));
     mrid_t id = 0;
-    for (; id < _msgers.size(); ++id)
-	if (_msgers[id] == nullptr)
-	    return id;
-    assert (id <= mrid_Last && "mrid_t address space exhausted; please ensure somebody is freeing them");
-    _msgers.emplace_back (nullptr);
+    for (; id < _creators.size(); ++id)
+	if (_creators[id] == id && !_msgers[id])
+	    break;
+    if (id > mrid_Last) {
+	assert (id <= mrid_Last && "mrid_t address space exhausted; please ensure somebody is freeing them");
+	Error ("no more mrids");
+	return id;
+    } else if (id >= _creators.size()) {
+	_msgers.push_back (nullptr);
+	_creators.push_back (creator);
+    } else {
+	assert (!_msgers[id]);
+	_creators[id] = creator;
+    }
     return id;
 }
 
 void App::FreeMrid (mrid_t id) noexcept
 {
     assert (ValidMsgerId(id));
-    DeleteMsger (id);
-    MsgerpById(id).reset (nullptr);
+    _creators[id] = id;
     DEBUG_PRINTF ("MsgerId %hu released\n", id);
+    auto m = _msgers[id];
+    if (m) // act as if the creator was destroyed
+	m->OnMsgerDestroyed (m->CreatorId());
+    else if (id == _msgers.size()-1) {
+	_msgers.pop_back();
+	_creators.pop_back();
+    }
 }
 
 Msger* App::CreateMsgerWith (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) noexcept // static
@@ -163,49 +179,57 @@ auto App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept // static
 
 Msg::Link& App::CreateLink (Msg::Link& l, iid_t iid) noexcept
 {
-    assert (l.src != mrid_New && "You may only create links originating from an existing Msger");
+    assert (l.src <= mrid_Last && "You may only create links originating from an existing Msger");
     assert ((l.dest == mrid_New || l.dest == mrid_Broadcast || ValidMsgerId(l.dest)) && "Invalid link destination requested");
     if (l.dest == mrid_Broadcast)
 	return l;
     if (l.dest == mrid_New)
-	l.dest = AllocateMrid();
-    auto& mrp = MsgerpById (l.dest);
-    if (!mrp.created())
-	mrp.release (CreateMsger (l, iid));
+	l.dest = AllocateMrid (l.src);
+    if (l.dest < _msgers.size() && !_msgers[l.dest])
+	_msgers[l.dest] = CreateMsger (l, iid);
     return l;
 }
 
 Msg::Link& App::CreateLinkWith (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept
 {
-    assert (l.src != mrid_New && "You may only create links originating from an existing Msger");
+    assert (l.src <= mrid_Last && "You may only create links originating from an existing Msger");
     assert (l.dest == mrid_New && "CreateLinkWith can only be used to create new links");
-    l.dest = AllocateMrid();
-    auto& mrp = MsgerpById (l.dest);
-    assert (!mrp.created() && "AllocateMrid must return an unused slot");
-    mrp.release (CreateMsgerWith (l, iid, fac));
+    l.dest = AllocateMrid (l.src);
+    if (l.dest < _msgers.size() && !_msgers[l.dest])
+	_msgers[l.dest] = CreateMsgerWith (l, iid, fac);
     return l;
 }
 
 void App::DeleteMsger (mrid_t mid) noexcept
 {
-    auto& m = _msgers[mid];
-    if (!m.created())
-	return;
-    auto mcrid = m->CreatorId();
-    m.destroy();
+    assert (ValidMsgerId(mid) && ValidMsgerId(_creators[mid]));
+    auto m = exchange (_msgers[mid], nullptr);
+    auto crid = _creators[mid];
+    if (m && !m->Flag (f_Static)) {
+	delete m;
+	DEBUG_PRINTF ("Msger %hu deleted\n", mid);
+    }
+
+    // Notify creator, if it exists
+    if (crid < _msgers.size()) {
+	auto cr = _msgers[crid];
+	if (cr)
+	    cr->OnMsgerDestroyed (mid);
+	else // or free mrid if creator is already deleted
+	    FreeMrid (mid);
+    }
+
     // Notify connected Msgers of this one's destruction
-    for (auto& u : _msgers)
-	if (u.created() && u->MsgerId() != mid && (u->CreatorId() == mid || u->MsgerId() == mcrid))
-	    u->OnMsgerDestroyed (mid);	// this may mark u unused
-    // Destroying does not release the mrid slot; that must be done explicitly.
-    DEBUG_PRINTF ("Msger %hu deleted\n", mid);
+    for (mrid_t i = 0; i < _creators.size(); ++i)
+	if (_creators[i] == mid)
+	    FreeMrid (i);
 }
 
 void App::DeleteUnusedMsgers (void) noexcept
 {
     // A Msger is unused if it has f_Unused flag set and has no pending messages in _outq
-    for (auto& m : _msgers)
-	if (m.created() && m->Flag(f_Unused) && !HasMessagesFor (m->MsgerId()))
+    for (auto m : _msgers)
+	if (m && m->Flag(f_Unused) && !HasMessagesFor (m->MsgerId()))
 	    DeleteMsger (m->MsgerId());
 }
 
@@ -243,14 +267,14 @@ void App::ProcessInputQueue (void) noexcept
 	if (msg.Dest() != mrid_Broadcast) {
 	    if (!ValidMsgerId (msg.Dest())) {
 		DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.Dest());
-		continue;
+		continue; // Error was reported in AllocateMrid
 	    }
 	    mg = msg.Dest();
 	    mgend = mg+1;
 	}
 	for (; mg < mgend; ++mg) {
-	    auto& msger = _msgers[mg];
-	    if (!msger.created())
+	    auto msger = _msgers[mg];
+	    if (!msger)
 		continue; // errors for msger creation failures were reported in CreateMsger; here just try to continue
 
 	    auto accepted = msger->Dispatch(msg);

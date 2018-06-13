@@ -122,7 +122,7 @@ public:
     static iid_t	InterfaceByName (const char* iname, streamsize inamesz) noexcept;
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
     auto		HasTimers (void) const		{ return _timers.size(); }
-    bool		ValidMsgerId (mrid_t id) const	{ return id <= _msgers.size(); }
+    bool		ValidMsgerId (mrid_t id) const	{ assert (_msgers.size() == _creators.size()); return id <= _msgers.size(); }
     void		Quit (void)			{ SetFlag (f_Quitting); }
     void		Quit (int ec)			{ s_ExitCode = ec; Quit(); }
     auto&		Errors (void) const		{ return _errors; }
@@ -143,44 +143,7 @@ protected:
     [[noreturn]] static void FatalSignalHandler (int sig) noexcept;
     static void		MsgSignalHandler (int sig) noexcept;
 private:
-    //{{{2 Msgerp ------------------------------------------------------
-    struct Msgerp {
-	using element_type = Msger;
-	using pointer = element_type*;
-	using const_pointer = const element_type*;
-	using reference = element_type&;
-	enum { SLOT_IN_USE = 1 };
-    public:
-	constexpr		Msgerp (pointer p)	: _p(p) {}
-				Msgerp (Msgerp&& v)	: _p(v.release()) {}
-				Msgerp (const Msgerp&) = delete;
-				~Msgerp (void) noexcept	{ reset(); }
-	constexpr pointer	get (void) const	{ return _p; }
-	pointer			release (pointer p = nullptr)	{ auto r(_p); _p = p; return r; }
-	bool			created (void) const	{ return SLOT_IN_USE < uintptr_t(_p); }
-	void			reset (pointer p = nullptr) {
-				    auto q = release (p);
-				    if (SLOT_IN_USE < uintptr_t(q) && !q->Flag(f_Static))
-					delete q;
-				}
-	void			destroy (void)		{ reset (pointer(uintptr_t(SLOT_IN_USE))); }
-	void			swap (Msgerp&& v)	{ ::cwiclo::swap (_p, v._p); }
-	auto&			operator= (pointer p)	{ reset (p); return *this; }
-	auto&			operator= (Msgerp&& p)	{ reset (p.release()); return *this; }
-	constexpr auto&		operator* (void) const	{ return *get(); }
-	constexpr pointer	operator-> (void) const	{ return get(); }
-	void			operator= (const Msgerp&) = delete;
-	constexpr bool		operator== (const_pointer p) const	{ return _p == p; }
-	bool			operator== (mrid_t id) const		{ return _p->MsgerId() == id; }
-	bool			operator< (mrid_t id) const		{ return _p->MsgerId() < id; }
-	bool			operator== (const Msgerp& p) const	{ return *this == p->MsgerId(); }
-	bool			operator< (const Msgerp& p) const	{ return *this < p->MsgerId(); }
-    private:
-	pointer		_p;
-    };
-    //}}}2--------------------------------------------------------------
-    //{{{2 MsgerImplements
-
+    //{{{2 MsgerImplements ---------------------------------------------
     // Maps a factory to an interface
     struct MsgerImplements {
 	iid_t			iface;
@@ -213,8 +176,8 @@ public:
     };
     //}}}2--------------------------------------------------------------
 private:
-    mrid_t		AllocateMrid (void) noexcept;
-    auto&		MsgerpById (mrid_t id)	{ return _msgers[id]; }
+    mrid_t		AllocateMrid (mrid_t creator) noexcept;
+    auto		MsgerpById (mrid_t id)	{ return _msgers[id]; }
     inline static auto	MsgerFactoryFor (iid_t id) {
 			    auto mii = s_MsgerImpls;
 			    while (mii->iface && mii->iface != id)
@@ -233,8 +196,9 @@ private:
 private:
     msgq_t		_outq;
     msgq_t		_inq;
-    vector<Msgerp>	_msgers;
+    vector<Msger*>	_msgers;
     vector<Timer*>	_timers;
+    vector<mrid_t>	_creators;
     string		_errors;
     static App*		s_pApp;
     static const MsgerImplements s_MsgerImpls[];
@@ -250,11 +214,13 @@ App::App (void) noexcept
 ,_inq()
 ,_msgers()
 ,_timers()
+,_creators()
 ,_errors()
 {
     assert (!s_pApp && "there must be only one App object");
     s_pApp = this;
     _msgers.emplace_back (this);
+    _creators.push_back (mrid_App);
 }
 
 int App::Run (void) noexcept
