@@ -143,14 +143,18 @@ mrid_t App::AllocateMrid (mrid_t creator) noexcept
 void App::FreeMrid (mrid_t id) noexcept
 {
     assert (ValidMsgerId(id));
-    _creators[id] = id;
-    DEBUG_PRINTF ("MsgerId %hu released\n", id);
     auto m = _msgers[id];
-    if (m) // act as if the creator was destroyed
-	m->OnMsgerDestroyed (m->CreatorId());
-    else if (id == _msgers.size()-1) {
+    if (!m && id == _msgers.size()-1) {
+	DEBUG_PRINTF ("MsgerId %hu deallocated\n", id);
 	_msgers.pop_back();
 	_creators.pop_back();
+    } else if (auto crid = _creators[id]; crid != id) {
+	DEBUG_PRINTF ("MsgerId %hu released\n", id);
+	_creators[id] = id;
+	if (m) { // act as if the creator was destroyed
+	    assert (m->CreatorId() == crid);
+	    m->OnMsgerDestroyed (crid);
+	}
     }
 }
 
