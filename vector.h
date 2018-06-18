@@ -57,6 +57,8 @@ public:
     constexpr auto		iat (size_type i)		{ assert (i <= size()); return begin() + i; }
     constexpr auto		iat (size_type i) const		{ assert (i <= size()); return begin() + i; }
     constexpr auto		ciat (size_type i) const	{ assert (i <= size()); return cbegin() + i; }
+    constexpr auto		iback (void)			{ return iterator(_data.end()-sizeof(T)); }
+    constexpr auto		iback (void) const		{ return const_iterator(_data.end()-sizeof(T)); }
     inline auto&		at (size_type i)		{ assert (i < size()); return begin()[i]; }
     constexpr auto&		at (size_type i) const		{ assert (i < size()); return begin()[i]; }
     constexpr auto&		cat (size_type i) const		{ assert (i < size()); return cbegin()[i]; }
@@ -64,8 +66,8 @@ public:
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }
     inline auto&		front (void)			{ assert (!empty()); return at(0); }
     constexpr auto&		front (void) const		{ assert (!empty()); return at(0); }
-    inline auto&		back (void)			{ assert (!empty()); return end()[-1]; }
-    constexpr auto&		back (void) const		{ assert (!empty()); return end()[-1]; }
+    inline auto&		back (void)			{ assert (!empty()); return *iback(); }
+    constexpr auto&		back (void) const		{ assert (!empty()); return *iback(); }
     inline void			clear (void)			{ if (!is_linked()) destroy (begin(), end()); _data.clear(); }
     inline void			swap (vector&& v)		{ _data.swap (move(v._data)); }
     inline void			deallocate (void) noexcept	{ assert (!is_linked()); destroy (begin(), end()); _data.deallocate(); }
@@ -97,7 +99,7 @@ public:
     inline auto			append (const_iterator i1, const_iterator i2)	{ return insert (end(), i1, i2); }
     inline auto			append (size_type n, const T& v)	{ return insert (end(), n, v); }
     inline auto			append (initlist_t v)			{ return append (v.begin(), v.end()); }
-    inline void			pop_back (void)				{ destroy_at (end()-1); _data.memlink::resize (_data.size() - sizeof(T)); }
+    inline void			pop_back (void)				{ auto ns = _data.size() - sizeof(T); auto b = iback(); _data.memlink::resize (ns); destroy_at (b); }
     inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
     constexpr bool		is_linked (void) const			{ return !_data.capacity(); }
     inline void			unlink (void)				{ _data.unlink(); }
