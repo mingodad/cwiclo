@@ -157,6 +157,8 @@ public:
     void			deallocate (void) noexcept;
     void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
     int				read_file (const char* filename) noexcept;
+    inline static auto		create_from_file (const char* filename) noexcept
+				    { memblock r; r.read_file (filename); return r; }
 };
 
 //----------------------------------------------------------------------

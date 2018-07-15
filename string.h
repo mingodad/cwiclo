@@ -41,6 +41,7 @@ public:
     inline void		assign (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); assign (i1, i2-i1); }
     int			assignv (const char* fmt, va_list args) noexcept;
     int			assignf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
+    inline static auto	create_from_file (const char* filename)noexcept	{ string r; r.read_file (filename); return r; }
     template <typename... Args>
     inline static auto	createf (const char* fmt, Args&&... args)	{ string r; r.assignf (fmt, forward<Args>(args)...); return r; }
     static int		compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2) noexcept;
