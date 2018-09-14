@@ -404,6 +404,7 @@ extern "C" int rmpath (const char* path) noexcept NONNULL();
 
 enum { SD_LISTEN_FDS_START = STDERR_FILENO+1 };
 extern "C" unsigned sd_listen_fds (void) noexcept;
+extern "C" int sd_listen_fd_by_name (const char* name) noexcept;
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

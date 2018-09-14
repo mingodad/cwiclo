@@ -21,9 +21,9 @@ public:
     using pointer		= const_pointer;
     enum { is_reading = true, is_writing = false, is_sizing = false };
 public:
-    inline constexpr		istream (pointer p, pointer e)	: _p(p),_e(e) {}
+    inline constexpr		istream (pointer p, pointer e)		: _p(p),_e(e) {}
     inline constexpr		istream (pointer p, streamsize sz)	: istream(p,p+sz) {}
-    inline constexpr		istream (const cmemlink& m)			: istream(m.data(),m.size()) {}
+    inline constexpr		istream (const cmemlink& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }

@@ -156,7 +156,7 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
     if (!penv)
 	penv = "/bin:/usr/bin:.";
     char path [PATH_MAX];
-    snprintf (ArrayBlock(path), "%s/%s"+3, penv);
+    snprintf (ArrayBlock(path), "%s/%s"+strlen("%s/"), penv);
 
     for (char *pf = path, *pl = pf; *pf; pf = pl) {
 	while (*pl && *pl != ':')
@@ -172,10 +172,29 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
 unsigned sd_listen_fds (void) noexcept
 {
     const char* e = getenv("LISTEN_PID");
-    if (!e || getpid() != pid_t(strtoul (e, nullptr, 10)))
+    if (!e || getpid() != pid_t(atoi(e)))
 	return 0;
     e = getenv("LISTEN_FDS");
-    return e ? strtoul (e, nullptr, 10) : 0;
+    return e ? atoi(e) : 0;
+}
+
+int sd_listen_fd_by_name (const char* name) noexcept
+{
+    const char* na = getenv("LISTEN_FDNAMES");
+    if (!na)
+	return -1;
+    auto namelen = strlen(name);
+    for (auto fdi = 0u; *na; ++fdi) {
+	auto ee = strchr(na,':');
+	if (!ee)
+	    ee = na+strlen(na);
+	if (size_t(ee-na) == namelen && 0 == memcmp (na, name, namelen))
+	    return fdi < sd_listen_fds() ? SD_LISTEN_FDS_START+fdi : -1;
+	if (!*ee)
+	    break;
+	na = ee+1;
+    }
+    return -1;
 }
 
 int mkpath (const char* path, mode_t mode) noexcept
