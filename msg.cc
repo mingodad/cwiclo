@@ -75,6 +75,10 @@ void Msger::ErrorLibc (const char* f) noexcept // static
 
 //----------------------------------------------------------------------
 
+Msg::Body::~Body (void) noexcept { fill_n (begin(), size(), value_type(0)); }
+
+//----------------------------------------------------------------------
+
 Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset_t fdo) noexcept
 :_method (mid)
 ,_link (l)
@@ -96,6 +100,11 @@ Msg::Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid, fdoffset
 ,_fdoffset (fdo)
 ,_body (move (body))
 {
+}
+
+Msg::~Msg (void) noexcept
+{
+    *reinterpret_cast<simd16_t*>(this) = simd16_t::zero();
 }
 
 static streamsize SigelementSize (char c) noexcept

@@ -225,7 +225,7 @@ private:
 	auto		HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr,); }
 	uint8_t		WriteHeaderStrings (methodid_t method) noexcept;
     private:
-	memblock	_body;
+	Msg::Body	_body;
 	Header		_h;
 	char		_hbuf [c_MaxHeaderSize];
     };

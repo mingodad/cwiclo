@@ -135,6 +135,13 @@ public:
 	mrid_t	src;
 	mrid_t	dest;
     };
+    class Body : public memblock {
+    public:
+	using memblock::memblock;
+	Body (Body&& v) : memblock(move(v)) {}
+	Body (memblock&& v) : memblock(move(v)) {}
+	~Body (void) noexcept;
+    };
     using fdoffset_t = uint8_t;
     static constexpr fdoffset_t NoFdIncluded = numeric_limits<fdoffset_t>::max();
     struct Alignment {
@@ -145,6 +152,7 @@ public:
 public:
 			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
 			Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
+			~Msg (void) noexcept;
     inline auto&	GetLink (void) const	{ return _link; }
     inline auto		Src (void) const	{ return GetLink().src; }
     inline auto		Dest (void) const	{ return GetLink().dest; }
@@ -169,7 +177,7 @@ private:
     Link		_link;
     mrid_t		_extid;
     fdoffset_t		_fdoffset;
-    memblock		_body;
+    Body		_body;
 };
 
 //}}}-------------------------------------------------------------------
