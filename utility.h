@@ -50,6 +50,7 @@ template <typename T> struct is_trivial : public integral_constant<bool, __is_tr
 template <typename T> struct is_trivially_constructible : public integral_constant<bool, __has_trivial_constructor(T)> {};
 template <typename T> struct is_trivially_destructible : public integral_constant<bool, __has_trivial_destructor(T)> {};
 template <typename T> struct is_trivially_copyable : public integral_constant<bool, __has_trivial_copy(T)> {};
+template <typename T> struct is_trivially_assignable : public integral_constant<bool, __has_trivial_assign(T)> {};
 
 template <typename T> struct make_unsigned	{ using type = T; };
 template <> struct make_unsigned<char>		{ using type = unsigned char; };
@@ -64,6 +65,10 @@ template <typename T> struct bits_in_type	{ static constexpr const size_t value 
 
 // The weakest possible cast to an already convertible type
 template <typename T> constexpr decltype(auto) implicit_cast (remove_reference_t<T>& v) { return v; }
+template <typename T, typename F> constexpr decltype(auto) union_cast (F& v)
+    { union FTU { F f; T t; }; return reinterpret_cast<FTU&>(v).t; }
+template <typename T, typename F> constexpr decltype(auto) union_cast (const F& v)
+    { union FTU { F f; T t; }; return reinterpret_cast<const FTU&>(v).t; }
 
 // Create a passthrough non-const member function from a call to a const member function
 #define UNCONST_MEMBER_FN(f,...)	\
